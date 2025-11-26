@@ -39,8 +39,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`Headers: ${JSON.stringify(req.headers)}`, "webhook");
       log(`Body: ${JSON.stringify(req.body)}`, "webhook");
       
-      // Parse the incoming webhook payload
       const webhookData = req.body;
+      
+      // Handle Motive's verification/test requests (empty or minimal payload)
+      if (!webhookData || Object.keys(webhookData).length === 0 || 
+          (!webhookData.vehicle_id && !webhookData.data?.vehicle_id)) {
+        log("Test/verification request detected - responding with success", "webhook");
+        return res.status(200).json({ 
+          success: true, 
+          message: "Webhook endpoint verified" 
+        });
+      }
       
       // Transform Motive payload to our schema
       const locationData = {
