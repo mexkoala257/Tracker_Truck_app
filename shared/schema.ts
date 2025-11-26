@@ -17,6 +17,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const vehicles = pgTable("vehicles", {
+  vehicleId: text("vehicle_id").primaryKey(),
+  name: text("name").notNull(),
+  color: text("color").default("#3b82f6"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertVehicleSchema = createInsertSchema(vehicles).omit({
+  createdAt: true,
+});
+
+export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
+export type Vehicle = typeof vehicles.$inferSelect;
+
 export const vehicleLocations = pgTable("vehicle_locations", {
   id: serial("id").primaryKey(),
   vehicleId: text("vehicle_id").notNull(),

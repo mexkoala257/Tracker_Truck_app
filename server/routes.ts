@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertVehicleLocationSchema, type VehicleLocation } from "@shared/schema";
+import { insertVehicleLocationSchema, insertVehicleSchema, type VehicleLocation } from "@shared/schema";
 import { log } from "./app";
 import crypto from "crypto";
 
@@ -125,11 +125,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inserted = await storage.insertVehicleLocation(validated);
       log(`Stored in database with ID: ${inserted.id}`, "webhook");
 
+      // Get vehicle metadata for broadcast
+      const vehicleMeta = await storage.getVehicle(inserted.vehicleId);
+
       // Broadcast to all connected WebSocket clients
       const message = JSON.stringify({
         type: "location_update",
         data: {
           id: inserted.vehicleId,
+          name: vehicleMeta?.name || inserted.vehicleId,
+          color: vehicleMeta?.color || "#3b82f6",
           location: {
             lat: inserted.latitude,
             lon: inserted.longitude,
@@ -220,13 +225,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upsert vehicle metadata (name, color)
+  app.post("/api/vehicles/:vehicleId", async (req, res) => {
+    try {
+      const { vehicleId } = req.params;
+      const { name, color } = req.body;
+      
+      const vehicleData = insertVehicleSchema.parse({
+        vehicleId,
+        name,
+        color,
+      });
+      
+      const vehicle = await storage.upsertVehicle(vehicleData);
+      res.json(vehicle);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get all vehicles with metadata
+  app.get("/api/vehicles/metadata", async (req, res) => {
+    try {
+      const vehiclesMeta = await storage.getAllVehicles();
+      res.json(vehiclesMeta);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all vehicles with their latest locations
   app.get("/api/vehicles", async (req, res) => {
     try {
       const locations = await storage.getAllVehicleLatestLocations();
+      const vehiclesMeta = await storage.getAllVehicles();
+      
+      const vehiclesMap = new Map(vehiclesMeta.map(v => [v.vehicleId, v]));
       
       res.json(locations.map((loc: VehicleLocation) => ({
         id: loc.vehicleId,
+        name: vehiclesMap.get(loc.vehicleId)?.name || loc.vehicleId,
+        color: vehiclesMap.get(loc.vehicleId)?.color || "#3b82f6",
         location: {
           lat: loc.latitude,
           lon: loc.longitude,

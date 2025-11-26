@@ -10,12 +10,14 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 export default function TrackingDashboard() {
   const [vehicleData, setVehicleData] = useState<{
     id: string;
+    name?: string;
+    color?: string;
     location: { lat: number; lon: number };
     speed: number;
     status: string;
     timestamp: string;
     heading: number;
-  } | null>(null);
+  }[]>([]);
 
   // Load existing vehicles from database on mount
   useEffect(() => {
@@ -24,10 +26,8 @@ export default function TrackingDashboard() {
         const response = await fetch("/api/vehicles");
         if (response.ok) {
           const vehicles = await response.json();
-          if (vehicles && vehicles.length > 0) {
-            console.log("Loaded vehicles from database:", vehicles);
-            setVehicleData(vehicles[0]);
-          }
+          console.log("Loaded vehicles from database:", vehicles);
+          setVehicleData(vehicles);
         }
       } catch (error) {
         console.error("Error loading vehicles:", error);
@@ -40,13 +40,31 @@ export default function TrackingDashboard() {
   // WebSocket connection for real-time updates from Motive
   const { isConnected } = useWebSocket((data) => {
     console.log("Real-time location update received:", data);
-    setVehicleData({
-      id: data.id,
-      location: data.location,
-      speed: data.speed,
-      status: data.status,
-      timestamp: data.timestamp,
-      heading: data.heading
+    setVehicleData(prev => {
+      const existingIndex = prev.findIndex(v => v.id === data.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          location: data.location,
+          speed: data.speed,
+          status: data.status,
+          timestamp: data.timestamp,
+          heading: data.heading
+        };
+        return updated;
+      } else {
+        return [...prev, {
+          id: data.id,
+          name: data.name,
+          color: data.color,
+          location: data.location,
+          speed: data.speed,
+          status: data.status,
+          timestamp: data.timestamp,
+          heading: data.heading
+        }];
+      }
     });
   });
 
@@ -159,17 +177,11 @@ export default function TrackingDashboard() {
           
           {/* Map Area - Takes up 3 columns */}
           <div className="lg:col-span-3 h-[50vh] lg:h-full min-h-0 rounded-xl overflow-hidden relative shadow-2xl border border-border/50">
-             {vehicleData ? (
+             {vehicleData.length > 0 ? (
                <>
                  <TrackingMap data={vehicleData} />
                  
                  {/* Decorative HUD elements */}
-                 <div className="absolute top-4 left-4 pointer-events-none z-[400]">
-                    <div className="text-[10px] font-mono text-muted-foreground/50">
-                      LAT: {vehicleData.location.lat.toFixed(4)}<br/>
-                      LON: {vehicleData.location.lon.toFixed(4)}
-                    </div>
-                 </div>
                  <div className="absolute bottom-4 left-4 pointer-events-none z-[400]">
                     <div className="h-32 w-32 border-l border-b border-primary/20 relative">
                       <div className="absolute bottom-0 left-0 w-2 h-2 bg-primary/50" />
@@ -194,9 +206,9 @@ export default function TrackingDashboard() {
 
           {/* Simulator / Controls Area */}
           <div className="lg:col-span-1 h-full min-h-0 flex flex-col gap-4 overflow-y-auto pb-4">
-            {vehicleData && (
+            {vehicleData.length > 0 && (
               <WebhookSimulator 
-                currentData={vehicleData} 
+                currentData={vehicleData[0]} 
                 onWebhookTrigger={handleWebhook} 
               />
             )}

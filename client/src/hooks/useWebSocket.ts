@@ -4,6 +4,8 @@ interface LocationUpdate {
   type: "location_update";
   data: {
     id: string;
+    name?: string;
+    color?: string;
     location: {
       lat: number;
       lon: number;

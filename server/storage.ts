@@ -1,18 +1,26 @@
 import { 
   type User, 
   type InsertUser, 
+  type Vehicle,
+  type InsertVehicle,
   type VehicleLocation, 
   type InsertVehicleLocation,
   users,
+  vehicles,
   vehicleLocations
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, desc, gte, lte, and } from "drizzle-orm";
+import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Vehicle metadata methods
+  upsertVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  getVehicle(vehicleId: string): Promise<Vehicle | undefined>;
+  getAllVehicles(): Promise<Vehicle[]>;
   
   // Vehicle location methods
   insertVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation>;
@@ -36,6 +44,27 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async upsertVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const [result] = await db
+      .insert(vehicles)
+      .values(vehicle)
+      .onConflictDoUpdate({
+        target: vehicles.vehicleId,
+        set: { name: vehicle.name, color: vehicle.color },
+      })
+      .returning();
+    return result;
+  }
+
+  async getVehicle(vehicleId: string): Promise<Vehicle | undefined> {
+    const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.vehicleId, vehicleId));
+    return vehicle;
+  }
+
+  async getAllVehicles(): Promise<Vehicle[]> {
+    return db.select().from(vehicles);
   }
 
   async insertVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation> {
