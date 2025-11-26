@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import WebhookSimulator from "@/components/WebhookSimulator";
+import ExportDialog from "@/components/ExportDialog";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,7 @@ export default function TrackingDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <ExportDialog />
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${
               isConnected 
                 ? 'bg-green-500/10 border-green-500/20' 

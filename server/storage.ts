@@ -7,7 +7,7 @@ import {
   vehicleLocations
 } from "@shared/schema";
 import { db } from "../db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, lte, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -19,6 +19,7 @@ export interface IStorage {
   getLatestVehicleLocation(vehicleId: string): Promise<VehicleLocation | undefined>;
   getVehicleLocationHistory(vehicleId: string, limit?: number): Promise<VehicleLocation[]>;
   getAllVehicleLatestLocations(): Promise<VehicleLocation[]>;
+  getAllVehicleLocations(filters?: { startDate?: Date; endDate?: Date; vehicleId?: string }): Promise<VehicleLocation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -77,6 +78,31 @@ export class DatabaseStorage implements IStorage {
     }
     
     return Array.from(latestByVehicle.values());
+  }
+
+  async getAllVehicleLocations(filters?: { startDate?: Date; endDate?: Date; vehicleId?: string }): Promise<VehicleLocation[]> {
+    const conditions = [];
+    
+    if (filters?.startDate) {
+      conditions.push(gte(vehicleLocations.timestamp, filters.startDate));
+    }
+    if (filters?.endDate) {
+      conditions.push(lte(vehicleLocations.timestamp, filters.endDate));
+    }
+    if (filters?.vehicleId) {
+      conditions.push(eq(vehicleLocations.vehicleId, filters.vehicleId));
+    }
+
+    const query = db
+      .select()
+      .from(vehicleLocations)
+      .orderBy(desc(vehicleLocations.timestamp));
+
+    if (conditions.length > 0) {
+      return query.where(and(...conditions));
+    }
+
+    return query;
   }
 }
 

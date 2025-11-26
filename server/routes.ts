@@ -241,5 +241,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export vehicle location data as CSV
+  app.get("/api/vehicles/export/csv", async (req, res) => {
+    try {
+      const { startDate, endDate, vehicleId } = req.query;
+      
+      const filters: { startDate?: Date; endDate?: Date; vehicleId?: string } = {};
+      
+      if (startDate) {
+        const parsed = new Date(startDate as string);
+        if (isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid startDate format" });
+        }
+        filters.startDate = parsed;
+      }
+      
+      if (endDate) {
+        const parsed = new Date(endDate as string);
+        if (isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid endDate format" });
+        }
+        filters.endDate = parsed;
+      }
+      
+      if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+        return res.status(400).json({ error: "startDate must be before endDate" });
+      }
+      
+      if (vehicleId) filters.vehicleId = vehicleId as string;
+
+      const locations = await storage.getAllVehicleLocations(filters);
+
+      const escapeCSV = (value: any): string => {
+        const str = String(value ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+
+      const csv = [
+        ['Vehicle ID', 'Latitude', 'Longitude', 'Speed (mph)', 'Heading (degrees)', 'Status', 'Timestamp', 'Received At'].join(','),
+        ...locations.map(loc => [
+          escapeCSV(loc.vehicleId),
+          loc.latitude,
+          loc.longitude,
+          loc.speed,
+          loc.heading,
+          escapeCSV(loc.status),
+          loc.timestamp.toISOString(),
+          loc.receivedAt.toISOString()
+        ].join(','))
+      ].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="vehicle-locations-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      log(`❌ Export error: ${error.message}`, "export");
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
