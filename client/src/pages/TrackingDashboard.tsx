@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import WebhookSimulator from "@/components/WebhookSimulator";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -18,17 +19,43 @@ const INITIAL_DATA = {
 export default function TrackingDashboard() {
   const [vehicleData, setVehicleData] = useState(INITIAL_DATA);
 
-  const handleWebhook = (payload: any) => {
-    console.log("Webhook received:", payload);
-    // Transform payload if necessary, here we match the simulator format
+  // WebSocket connection for real-time updates from Motive
+  const { isConnected } = useWebSocket((data) => {
+    console.log("Real-time location update received:", data);
     setVehicleData({
-      id: payload.vehicle_id,
-      location: payload.location,
-      speed: payload.speed,
-      status: payload.status,
-      timestamp: payload.timestamp,
-      heading: payload.heading
+      id: data.id,
+      location: data.location,
+      speed: data.speed,
+      status: data.status,
+      timestamp: data.timestamp,
+      heading: data.heading
     });
+  });
+
+  const handleWebhook = async (payload: any) => {
+    console.log("Simulating webhook:", payload);
+    
+    // Send to our webhook endpoint (simulating Motive)
+    try {
+      const response = await fetch("/api/webhooks/motive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicle_id: payload.vehicle_id,
+          location: payload.location,
+          speed: payload.speed,
+          status: payload.status,
+          timestamp: payload.timestamp,
+          heading: payload.heading
+        })
+      });
+      
+      if (!response.ok) {
+        console.error("Failed to send webhook simulation");
+      }
+    } catch (error) {
+      console.error("Error sending webhook:", error);
+    }
   };
 
   return (
@@ -78,7 +105,6 @@ export default function TrackingDashboard() {
                       <Satellite className="w-6 h-6 text-primary" />
                       <span className="font-bold">Motive Tracker</span>
                     </div>
-                    {/* ... simplistic mobile nav ... */}
                  </div>
               </SheetContent>
             </Sheet>
@@ -91,9 +117,17 @@ export default function TrackingDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-              <Radio className="w-3 h-3 text-green-500 animate-pulse" />
-              <span className="text-[10px] font-mono font-bold text-green-500 uppercase">System Online</span>
+            <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${
+              isConnected 
+                ? 'bg-green-500/10 border-green-500/20' 
+                : 'bg-yellow-500/10 border-yellow-500/20'
+            }`}>
+              <Radio className={`w-3 h-3 ${isConnected ? 'text-green-500 animate-pulse' : 'text-yellow-500'}`} />
+              <span className={`text-[10px] font-mono font-bold uppercase ${
+                isConnected ? 'text-green-500' : 'text-yellow-500'
+              }`}>
+                {isConnected ? 'Live Feed' : 'Connecting...'}
+              </span>
             </div>
             <div className="h-8 w-8 rounded-full bg-secondary border border-border flex items-center justify-center">
               <span className="text-xs font-bold">JD</span>
@@ -111,8 +145,8 @@ export default function TrackingDashboard() {
              {/* Decorative HUD elements */}
              <div className="absolute top-4 left-4 pointer-events-none z-[400]">
                 <div className="text-[10px] font-mono text-muted-foreground/50">
-                  LAT: {vehicleData.location.lat}<br/>
-                  LON: {vehicleData.location.lon}
+                  LAT: {vehicleData.location.lat.toFixed(4)}<br/>
+                  LON: {vehicleData.location.lon.toFixed(4)}
                 </div>
              </div>
              <div className="absolute bottom-4 left-4 pointer-events-none z-[400]">
