@@ -1,0 +1,144 @@
+# Motive GPS Tracker
+
+## Overview
+
+This is a real-time vehicle tracking dashboard application that integrates with Motive's GPS system via webhooks. The application receives live location updates from Motive, stores them in a PostgreSQL database, and displays vehicle positions on an interactive map with real-time updates pushed to the browser via WebSockets.
+
+The system is designed as a logistics command center, providing fleet managers with instant visibility into vehicle locations, speeds, headings, and movement status.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+
+**Technology Stack:**
+- React with TypeScript for UI components
+- Vite as the build tool and development server
+- TanStack Query for server state management
+- Wouter for client-side routing
+- Tailwind CSS with custom theme for styling
+- shadcn/ui component library (Radix UI primitives)
+
+**Key Design Patterns:**
+- Component-based architecture with reusable UI components
+- Custom hooks for WebSocket connectivity (`useWebSocket.ts`)
+- Separation of concerns: components, hooks, and utilities in distinct directories
+
+**Map Integration:**
+- Leaflet.js for interactive mapping
+- React-Leaflet for React bindings
+- Custom truck icons with rotation based on heading
+- Real-time marker updates without page refresh
+
+**State Management:**
+- Vehicle data stored in component state
+- WebSocket connection manages real-time updates
+- TanStack Query handles HTTP requests and caching
+
+### Backend Architecture
+
+**Technology Stack:**
+- Express.js REST API server
+- TypeScript for type safety
+- WebSocket Server (ws library) for real-time updates
+- Drizzle ORM for database operations
+- Development/production split via separate entry points
+
+**API Endpoints:**
+- `POST /api/webhooks/motive` - Receives GPS data from Motive webhooks
+- `GET /api/vehicles` - Retrieves all latest vehicle locations
+- `GET /api/vehicles/:vehicleId` - Gets latest location for specific vehicle
+- `GET /api/vehicles/:vehicleId/history` - Fetches historical locations
+- `GET /api/vehicles/export/csv` - Exports location data as CSV
+
+**Real-time Architecture:**
+- WebSocket server runs on the same HTTP server as Express
+- Broadcasts location updates to all connected clients immediately
+- Clients auto-reconnect on connection loss
+
+**Security Considerations:**
+- Webhook signature verification using HMAC SHA-1 (Motive standard)
+- Timing-safe signature comparison to prevent timing attacks
+- Raw body preservation for signature validation
+
+### Data Storage
+
+**Database:** PostgreSQL (via Neon serverless driver)
+
+**Schema Design:**
+Two primary tables defined in `shared/schema.ts`:
+
+1. **users** - User authentication (currently not in active use)
+   - id (UUID, primary key)
+   - username (unique text)
+   - password (text)
+
+2. **vehicle_locations** - GPS tracking data
+   - id (serial, primary key)
+   - vehicleId (text) - Identifier from Motive
+   - latitude (real)
+   - longitude (real)
+   - speed (real)
+   - heading (real) - Vehicle direction in degrees
+   - status (text) - e.g., "moving", "stopped", "idle"
+   - timestamp (timestamp) - When Motive recorded the data
+   - receivedAt (timestamp) - When webhook was received
+
+**Data Access Layer:**
+- Abstracted through `IStorage` interface in `server/storage.ts`
+- Concrete implementation: `DatabaseStorage` class
+- Methods for inserting, querying latest, fetching history
+- Support for filtering by date range and vehicle ID
+
+**Migration Strategy:**
+- Drizzle Kit for schema migrations
+- Configuration in `drizzle.config.ts`
+- Migrations stored in `/migrations` directory
+
+### External Dependencies
+
+**Third-Party Services:**
+- **Motive Fleet Management API** - Source of GPS webhook data
+  - Sends location updates via HTTP POST webhooks
+  - Payload includes vehicle ID, coordinates, speed, heading, status, timestamp
+  - Requires webhook signature verification for security
+
+**Cloud Infrastructure:**
+- **Neon Serverless PostgreSQL** - Database hosting
+  - Accessed via `@neondatabase/serverless` driver
+  - WebSocket-based connections for serverless environments
+  - Connection pooling managed by Neon's Pool class
+
+**Mapping Services:**
+- **OpenStreetMap via Leaflet** - Tile provider for maps
+  - Uses public tile servers
+  - No API key required
+  - CDN-delivered Leaflet CSS
+
+**UI Component Libraries:**
+- **Radix UI** - Headless accessible components (dialogs, dropdowns, tooltips, etc.)
+  - Provides accessible primitives without styling
+  - Customized via shadcn/ui wrapper components
+
+**Font Services:**
+- **Google Fonts** - Inter (UI text) and JetBrains Mono (data/code display)
+
+**Development Tools:**
+- **Replit Plugins** - Development environment enhancements
+  - Runtime error overlay
+  - Cartographer for code navigation
+  - Dev banner for Replit environment
+
+**Build & Deployment:**
+- Vite for frontend bundling and development server
+- esbuild for backend production build
+- Environment detection via NODE_ENV and REPL_ID
+
+**Notable Configuration Choices:**
+- Custom Vite plugin (`vite-plugin-meta-images.ts`) updates OpenGraph meta tags for Replit deployments
+- Session management via `connect-pg-simple` (PostgreSQL session store)
+- Raw body preservation middleware for webhook signature verification
+- WebSocket path: `/ws` with same-origin policy
