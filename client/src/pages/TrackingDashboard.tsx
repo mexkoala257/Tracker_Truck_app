@@ -6,18 +6,15 @@ import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu } fr
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-// Initial dummy data (fallback if no data in DB)
-const INITIAL_DATA = {
-  id: "Truck-101",
-  location: { lat: 37.7749, lon: -122.4194 }, // San Francisco
-  speed: 45,
-  status: "moving",
-  timestamp: new Date().toISOString(),
-  heading: 45
-};
-
 export default function TrackingDashboard() {
-  const [vehicleData, setVehicleData] = useState(INITIAL_DATA);
+  const [vehicleData, setVehicleData] = useState<{
+    id: string;
+    location: { lat: number; lon: number };
+    speed: number;
+    status: string;
+    timestamp: string;
+    heading: number;
+  } | null>(null);
 
   // Load existing vehicles from database on mount
   useEffect(() => {
@@ -28,7 +25,6 @@ export default function TrackingDashboard() {
           const vehicles = await response.json();
           if (vehicles && vehicles.length > 0) {
             console.log("Loaded vehicles from database:", vehicles);
-            // Use the first vehicle (most recent)
             setVehicleData(vehicles[0]);
           }
         }
@@ -161,28 +157,47 @@ export default function TrackingDashboard() {
           
           {/* Map Area - Takes up 3 columns */}
           <div className="lg:col-span-3 h-[50vh] lg:h-full min-h-0 rounded-xl overflow-hidden relative shadow-2xl border border-border/50">
-             <TrackingMap data={vehicleData} />
-             
-             {/* Decorative HUD elements */}
-             <div className="absolute top-4 left-4 pointer-events-none z-[400]">
-                <div className="text-[10px] font-mono text-muted-foreground/50">
-                  LAT: {vehicleData.location.lat.toFixed(4)}<br/>
-                  LON: {vehicleData.location.lon.toFixed(4)}
-                </div>
-             </div>
-             <div className="absolute bottom-4 left-4 pointer-events-none z-[400]">
-                <div className="h-32 w-32 border-l border-b border-primary/20 relative">
-                  <div className="absolute bottom-0 left-0 w-2 h-2 bg-primary/50" />
-                </div>
-             </div>
+             {vehicleData ? (
+               <>
+                 <TrackingMap data={vehicleData} />
+                 
+                 {/* Decorative HUD elements */}
+                 <div className="absolute top-4 left-4 pointer-events-none z-[400]">
+                    <div className="text-[10px] font-mono text-muted-foreground/50">
+                      LAT: {vehicleData.location.lat.toFixed(4)}<br/>
+                      LON: {vehicleData.location.lon.toFixed(4)}
+                    </div>
+                 </div>
+                 <div className="absolute bottom-4 left-4 pointer-events-none z-[400]">
+                    <div className="h-32 w-32 border-l border-b border-primary/20 relative">
+                      <div className="absolute bottom-0 left-0 w-2 h-2 bg-primary/50" />
+                    </div>
+                 </div>
+               </>
+             ) : (
+               <div className="h-full w-full flex flex-col items-center justify-center bg-background text-muted-foreground">
+                 <Satellite className="w-16 h-16 mb-4 animate-pulse text-primary/50" />
+                 <h2 className="text-lg font-semibold mb-2">Waiting for Vehicle Data</h2>
+                 <p className="text-sm text-center max-w-md">
+                   No vehicles tracked yet. Data will appear here when Motive sends GPS updates via webhook.
+                 </p>
+                 <div className="mt-6 p-4 rounded-lg border border-border bg-secondary/20 max-w-lg">
+                   <p className="text-xs text-muted-foreground">
+                     <strong className="text-foreground">Webhook URL:</strong> {window.location.origin}/api/webhooks/motive
+                   </p>
+                 </div>
+               </div>
+             )}
           </div>
 
           {/* Simulator / Controls Area */}
           <div className="lg:col-span-1 h-full min-h-0 flex flex-col gap-4 overflow-y-auto pb-4">
-            <WebhookSimulator 
-              currentData={vehicleData} 
-              onWebhookTrigger={handleWebhook} 
-            />
+            {vehicleData && (
+              <WebhookSimulator 
+                currentData={vehicleData} 
+                onWebhookTrigger={handleWebhook} 
+              />
+            )}
             
             {/* Info Panel */}
             <div className="p-4 rounded-lg border border-blue-500/20 bg-blue-950/10">
