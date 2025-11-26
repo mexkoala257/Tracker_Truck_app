@@ -4,9 +4,26 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertVehicleLocationSchema } from "@shared/schema";
 import { log } from "./app";
+import crypto from "crypto";
 
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
+
+// Verify Motive webhook signature
+function verifyMotiveSignature(payload: string, signature: string, secret: string): boolean {
+  const hmac = crypto.createHmac('sha256', secret);
+  const expectedSignature = hmac.update(payload).digest('hex');
+  
+  // Timing-safe comparison
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -38,6 +55,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`🚨 WEBHOOK RECEIVED from Motive!`, "webhook");
       log(`Headers: ${JSON.stringify(req.headers)}`, "webhook");
       log(`Body: ${JSON.stringify(req.body)}`, "webhook");
+      
+      // Verify webhook signature if secret is configured
+      const webhookSecret = process.env.MOTIVE_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const signature = req.headers['x-motive-signature'] as string;
+        const rawBody = JSON.stringify(req.body);
+        
+        if (!signature) {
+          log("❌ Missing webhook signature header", "webhook");
+          return res.status(403).json({ 
+            success: false, 
+            error: "Missing signature" 
+          });
+        }
+        
+        if (!verifyMotiveSignature(rawBody, signature, webhookSecret)) {
+          log("❌ Invalid webhook signature", "webhook");
+          return res.status(403).json({ 
+            success: false, 
+            error: "Invalid signature" 
+          });
+        }
+        
+        log("✅ Webhook signature verified", "webhook");
+      } else {
+        log("⚠️ No webhook secret configured - skipping signature verification", "webhook");
+      }
       
       const webhookData = req.body;
       
