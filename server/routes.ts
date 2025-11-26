@@ -9,9 +9,9 @@ import crypto from "crypto";
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
 
-// Verify Motive webhook signature
+// Verify Motive webhook signature (uses SHA-1 per Motive docs)
 function verifyMotiveSignature(payload: string, signature: string, secret: string): boolean {
-  const hmac = crypto.createHmac('sha256', secret);
+  const hmac = crypto.createHmac('sha1', secret);
   const expectedSignature = hmac.update(payload).digest('hex');
   
   // Timing-safe comparison
