@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import WebhookSimulator from "@/components/WebhookSimulator";
 import { useWebSocket } from "@/hooks/useWebSocket";
@@ -6,7 +6,7 @@ import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu } fr
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-// Initial dummy data
+// Initial dummy data (fallback if no data in DB)
 const INITIAL_DATA = {
   id: "Truck-101",
   location: { lat: 37.7749, lon: -122.4194 }, // San Francisco
@@ -18,6 +18,27 @@ const INITIAL_DATA = {
 
 export default function TrackingDashboard() {
   const [vehicleData, setVehicleData] = useState(INITIAL_DATA);
+
+  // Load existing vehicles from database on mount
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles");
+        if (response.ok) {
+          const vehicles = await response.json();
+          if (vehicles && vehicles.length > 0) {
+            console.log("Loaded vehicles from database:", vehicles);
+            // Use the first vehicle (most recent)
+            setVehicleData(vehicles[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading vehicles:", error);
+      }
+    };
+
+    loadVehicles();
+  }, []);
 
   // WebSocket connection for real-time updates from Motive
   const { isConnected } = useWebSocket((data) => {

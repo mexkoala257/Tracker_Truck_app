@@ -166,5 +166,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all vehicles with their latest locations
+  app.get("/api/vehicles", async (req, res) => {
+    try {
+      const locations = await storage.getAllVehicleLatestLocations();
+      
+      res.json(locations.map((loc: VehicleLocation) => ({
+        id: loc.vehicleId,
+        location: {
+          lat: loc.latitude,
+          lon: loc.longitude,
+        },
+        speed: loc.speed,
+        heading: loc.heading,
+        status: loc.status,
+        timestamp: loc.timestamp.toISOString(),
+      })));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }

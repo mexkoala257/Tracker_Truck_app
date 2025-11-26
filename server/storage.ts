@@ -18,6 +18,7 @@ export interface IStorage {
   insertVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation>;
   getLatestVehicleLocation(vehicleId: string): Promise<VehicleLocation | undefined>;
   getVehicleLocationHistory(vehicleId: string, limit?: number): Promise<VehicleLocation[]>;
+  getAllVehicleLatestLocations(): Promise<VehicleLocation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -58,6 +59,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(vehicleLocations.vehicleId, vehicleId))
       .orderBy(desc(vehicleLocations.timestamp))
       .limit(limit);
+  }
+
+  async getAllVehicleLatestLocations(): Promise<VehicleLocation[]> {
+    // Get distinct vehicle IDs and their latest location
+    const locations = await db
+      .select()
+      .from(vehicleLocations)
+      .orderBy(desc(vehicleLocations.timestamp));
+    
+    // Group by vehicleId and keep only the latest for each
+    const latestByVehicle = new Map<string, VehicleLocation>();
+    for (const loc of locations) {
+      if (!latestByVehicle.has(loc.vehicleId)) {
+        latestByVehicle.set(loc.vehicleId, loc);
+      }
+    }
+    
+    return Array.from(latestByVehicle.values());
   }
 }
 
