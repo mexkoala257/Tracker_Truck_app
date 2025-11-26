@@ -35,8 +35,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook endpoint for Motive GPS data
   app.post("/api/webhooks/motive", async (req, res) => {
     try {
+      log(`🚨 WEBHOOK RECEIVED from Motive!`, "webhook");
+      log(`Headers: ${JSON.stringify(req.headers)}`, "webhook");
+      log(`Body: ${JSON.stringify(req.body)}`, "webhook");
+      
       // Parse the incoming webhook payload
-      // Motive webhook structure might vary - adjust as needed
       const webhookData = req.body;
       
       // Transform Motive payload to our schema
@@ -50,11 +53,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date(webhookData.timestamp || webhookData.data?.timestamp || Date.now()),
       };
 
+      log(`Parsed location data: ${JSON.stringify(locationData)}`, "webhook");
+
       // Validate with Zod
       const validated = insertVehicleLocationSchema.parse(locationData);
 
       // Store in database
       const inserted = await storage.insertVehicleLocation(validated);
+      log(`Stored in database with ID: ${inserted.id}`, "webhook");
 
       // Broadcast to all connected WebSocket clients
       const message = JSON.stringify({
@@ -78,16 +84,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      log(`Location update for ${inserted.vehicleId} broadcast to ${wsClients.size} clients`, "webhook");
+      log(`Location update broadcast to ${wsClients.size} clients`, "webhook");
 
       res.status(200).json({ success: true, id: inserted.id });
     } catch (error: any) {
-      log(`Webhook error: ${error.message}`, "webhook");
+      log(`❌ Webhook error: ${error.message}`, "webhook");
+      log(`Error stack: ${error.stack}`, "webhook");
       res.status(400).json({ 
         success: false, 
         error: error.message 
       });
     }
+  });
+
+  // Test endpoint to verify webhook is accessible
+  app.get("/api/webhooks/motive/test", async (req, res) => {
+    log("Test endpoint called", "webhook");
+    res.json({ 
+      status: "ok", 
+      message: "Webhook endpoint is accessible",
+      timestamp: new Date().toISOString()
+    });
   });
 
   // Get latest location for a vehicle
