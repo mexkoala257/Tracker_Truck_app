@@ -59,11 +59,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify webhook signature if secret is configured
       const webhookSecret = process.env.MOTIVE_WEBHOOK_SECRET;
       if (webhookSecret) {
-        const signature = req.headers['x-motive-signature'] as string;
+        const signature = req.headers['x-kt-webhook-signature'] as string;
         const rawBody = JSON.stringify(req.body);
         
         if (!signature) {
-          log("❌ Missing webhook signature header", "webhook");
+          log("❌ Missing webhook signature header (X-KT-Webhook-Signature)", "webhook");
           return res.status(403).json({ 
             success: false, 
             error: "Missing signature" 
@@ -85,25 +85,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const webhookData = req.body;
       
-      // Handle Motive's verification/test requests (empty or minimal payload)
-      if (!webhookData || Object.keys(webhookData).length === 0 || 
-          (!webhookData.vehicle_id && !webhookData.data?.vehicle_id)) {
-        log("Test/verification request detected - responding with success", "webhook");
+      // Handle Motive's test/verification requests (array payload like ["vehicle_location_updated"])
+      if (Array.isArray(webhookData)) {
+        log(`Test/verification request detected: ${JSON.stringify(webhookData)}`, "webhook");
         return res.status(200).json({ 
           success: true, 
           message: "Webhook endpoint verified" 
         });
       }
       
+      // Handle empty payloads
+      if (!webhookData || Object.keys(webhookData).length === 0) {
+        log("Empty webhook payload - responding with success", "webhook");
+        return res.status(200).json({ 
+          success: true, 
+          message: "Webhook received" 
+        });
+      }
+      
+      // Check if this is a vehicle location webhook
+      if (webhookData.action !== "vehicle_location_received" && webhookData.action !== "vehicle_location_updated") {
+        log(`Ignoring webhook action: ${webhookData.action}`, "webhook");
+        return res.status(200).json({ 
+          success: true, 
+          message: "Webhook received but not a location update" 
+        });
+      }
+      
       // Transform Motive payload to our schema
       const locationData = {
-        vehicleId: webhookData.vehicle_id || webhookData.data?.vehicle_id,
-        latitude: webhookData.location?.lat || webhookData.data?.location?.lat,
-        longitude: webhookData.location?.lon || webhookData.data?.location?.lon,
-        speed: webhookData.speed || webhookData.data?.speed || 0,
-        heading: webhookData.heading || webhookData.data?.heading || 0,
-        status: webhookData.status || webhookData.data?.status || "unknown",
-        timestamp: new Date(webhookData.timestamp || webhookData.data?.timestamp || Date.now()),
+        vehicleId: String(webhookData.vehicle_id || webhookData.vehicle_number || "unknown"),
+        latitude: webhookData.lat,
+        longitude: webhookData.lon,
+        speed: webhookData.speed || 0,
+        heading: webhookData.bearing || 0,
+        status: webhookData.type || "unknown",
+        timestamp: new Date(webhookData.located_at || Date.now()),
       };
 
       log(`Parsed location data: ${JSON.stringify(locationData)}`, "webhook");
