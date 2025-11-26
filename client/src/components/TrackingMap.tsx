@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Truck, Navigation, MapPin } from "lucide-react";
+import { Truck, Navigation, MapPin, Pencil } from "lucide-react";
 import { renderToString } from "react-dom/server";
+import { Button } from "@/components/ui/button";
+import EditVehicleDialog from "./EditVehicleDialog";
 
 // Fix for Leaflet icon issues in React
 import "leaflet/dist/leaflet.css";
@@ -25,6 +27,7 @@ interface VehicleData {
 
 interface TrackingMapProps {
   data: VehicleData[];
+  onVehicleUpdate?: () => void;
 }
 
 // Component to fit map bounds to show all vehicles
@@ -71,9 +74,10 @@ const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: s
   });
 };
 
-export default function TrackingMap({ data }: TrackingMapProps) {
+export default function TrackingMap({ data, onVehicleUpdate }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const loadedVehicles = useRef<Set<string>>(new Set());
+  const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
 
   useEffect(() => {
     const loadTrails = async () => {
@@ -112,6 +116,27 @@ export default function TrackingMap({ data }: TrackingMapProps) {
 
   const centerLat = data.reduce((sum, v) => sum + v.location.lat, 0) / data.length;
   const centerLon = data.reduce((sum, v) => sum + v.location.lon, 0) / data.length;
+
+  const handleSaveVehicle = async (vehicleId: string, name: string, color: string) => {
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, color }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to update vehicle");
+      }
+      
+      if (onVehicleUpdate) {
+        onVehicleUpdate();
+      }
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      throw error;
+    }
+  };
 
   return (
     <div className="h-full w-full rounded-xl overflow-hidden border border-border shadow-2xl relative z-0 group">
@@ -189,9 +214,20 @@ export default function TrackingMap({ data }: TrackingMapProps) {
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {data.map((vehicle) => (
             <div key={vehicle.id} className="bg-secondary/50 p-2 rounded border border-border/50">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vehicle.color }} />
-                <div className="text-xs font-bold">{vehicle.name || vehicle.id}</div>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vehicle.color }} />
+                  <div className="text-xs font-bold">{vehicle.name || vehicle.id}</div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setEditingVehicle(vehicle)}
+                  data-testid={`button-edit-vehicle-${vehicle.id}`}
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
               </div>
               <div className="text-[10px] text-muted-foreground">
                 {vehicle.speed} mph • {vehicle.status}
@@ -200,6 +236,15 @@ export default function TrackingMap({ data }: TrackingMapProps) {
           ))}
         </div>
       </div>
+
+      {editingVehicle && (
+        <EditVehicleDialog
+          vehicle={editingVehicle}
+          open={!!editingVehicle}
+          onOpenChange={(open) => !open && setEditingVehicle(null)}
+          onSave={handleSaveVehicle}
+        />
+      )}
     </div>
   );
 }

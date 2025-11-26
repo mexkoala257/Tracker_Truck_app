@@ -20,20 +20,20 @@ export default function TrackingDashboard() {
   }[]>([]);
 
   // Load existing vehicles from database on mount
-  useEffect(() => {
-    const loadVehicles = async () => {
-      try {
-        const response = await fetch("/api/vehicles");
-        if (response.ok) {
-          const vehicles = await response.json();
-          console.log("Loaded vehicles from database:", vehicles);
-          setVehicleData(vehicles);
-        }
-      } catch (error) {
-        console.error("Error loading vehicles:", error);
+  const loadVehicles = async () => {
+    try {
+      const response = await fetch("/api/vehicles");
+      if (response.ok) {
+        const vehicles = await response.json();
+        console.log("Loaded vehicles from database:", vehicles);
+        setVehicleData(vehicles);
       }
-    };
+    } catch (error) {
+      console.error("Error loading vehicles:", error);
+    }
+  };
 
+  useEffect(() => {
     loadVehicles();
   }, []);
 
@@ -179,7 +179,7 @@ export default function TrackingDashboard() {
           <div className="lg:col-span-3 h-[50vh] lg:h-full min-h-0 rounded-xl overflow-hidden relative shadow-2xl border border-border/50">
              {vehicleData.length > 0 ? (
                <>
-                 <TrackingMap data={vehicleData} />
+                 <TrackingMap data={vehicleData} onVehicleUpdate={loadVehicles} />
                  
                  {/* Decorative HUD elements */}
                  <div className="absolute bottom-4 left-4 pointer-events-none z-[400]">
