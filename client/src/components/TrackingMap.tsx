@@ -30,7 +30,7 @@ interface TrackingMapProps {
   onVehicleUpdate?: () => void;
 }
 
-// Component to fit map bounds to show all vehicles
+// Component to fit map bounds to show all vehicles (within restricted area)
 function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
   const map = useMap();
   
@@ -39,9 +39,10 @@ function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
       const bounds = L.latLngBounds(
         vehicles.map(v => [v.location.lat, v.location.lon])
       );
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+      // Fit bounds but don't zoom in too much or out beyond our region
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11, minZoom: 7 });
     }
-  }, [vehicles, map]);
+  }, [vehicles.length, map]);
   
   return null;
 }
