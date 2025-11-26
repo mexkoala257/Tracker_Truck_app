@@ -114,8 +114,11 @@ export default function TrackingMap({ data, onVehicleUpdate }: TrackingMapProps)
     );
   }
 
-  const centerLat = data.reduce((sum, v) => sum + v.location.lat, 0) / data.length;
-  const centerLon = data.reduce((sum, v) => sum + v.location.lon, 0) / data.length;
+  // South Dakota and part of Minnesota bounds
+  const southDakotaBounds: L.LatLngBoundsExpression = [
+    [42.5, -104.5], // Southwest corner
+    [46.0, -94.0]   // Northeast corner (extends into Minnesota)
+  ];
 
   const handleSaveVehicle = async (vehicleId: string, name: string, color: string) => {
     try {
@@ -141,8 +144,12 @@ export default function TrackingMap({ data, onVehicleUpdate }: TrackingMapProps)
   return (
     <div className="h-full w-full rounded-xl overflow-hidden border border-border shadow-2xl relative z-0 group">
       <MapContainer
-        center={[centerLat, centerLon]}
-        zoom={13}
+        center={[44.5, -99.0]}
+        zoom={7}
+        minZoom={6}
+        maxZoom={15}
+        maxBounds={southDakotaBounds}
+        maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="h-full w-full bg-background"
         zoomControl={false}
