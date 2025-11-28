@@ -2,12 +2,38 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertVehicleLocationSchema, insertVehicleSchema, type VehicleLocation } from "@shared/schema";
+import { insertVehicleLocationSchema, insertVehicleSchema, type VehicleLocation, type Vehicle } from "@shared/schema";
 import { log } from "./app";
 import crypto from "crypto";
 
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
+
+// Vehicle metadata cache to avoid DB lookups on every webhook
+const vehicleMetadataCache = new Map<string, { name: string; color: string }>();
+let metadataCacheInitialized = false;
+
+async function initVehicleMetadataCache() {
+  if (metadataCacheInitialized) return;
+  try {
+    const vehicles = await storage.getAllVehicles();
+    for (const v of vehicles) {
+      vehicleMetadataCache.set(v.vehicleId, { name: v.name || v.vehicleId, color: v.color || "#3b82f6" });
+    }
+    metadataCacheInitialized = true;
+    log(`Vehicle metadata cache initialized with ${vehicles.length} vehicles`, "cache");
+  } catch (error) {
+    log(`Failed to initialize vehicle metadata cache: ${error}`, "cache");
+  }
+}
+
+function getVehicleMetadata(vehicleId: string): { name: string; color: string } {
+  return vehicleMetadataCache.get(vehicleId) || { name: vehicleId, color: "#3b82f6" };
+}
+
+function updateVehicleMetadataCache(vehicleId: string, name: string, color: string) {
+  vehicleMetadataCache.set(vehicleId, { name, color });
+}
 
 // Verify Motive webhook signature (uses SHA-1 per Motive docs)
 function verifyMotiveSignature(payload: string, signature: string, secret: string): boolean {
@@ -27,6 +53,9 @@ function verifyMotiveSignature(payload: string, signature: string, secret: strin
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Initialize vehicle metadata cache on startup
+  await initVehicleMetadataCache();
 
   // Setup WebSocket server
   const wss = new WebSocketServer({ 
@@ -125,16 +154,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inserted = await storage.insertVehicleLocation(validated);
       log(`Stored in database with ID: ${inserted.id}`, "webhook");
 
-      // Get vehicle metadata for broadcast
-      const vehicleMeta = await storage.getVehicle(inserted.vehicleId);
+      // Get vehicle metadata from cache (no DB lookup!)
+      const vehicleMeta = getVehicleMetadata(inserted.vehicleId);
 
       // Broadcast to all connected WebSocket clients
       const message = JSON.stringify({
         type: "location_update",
         data: {
           id: inserted.vehicleId,
-          name: vehicleMeta?.name || inserted.vehicleId,
-          color: vehicleMeta?.color || "#3b82f6",
+          name: vehicleMeta.name,
+          color: vehicleMeta.color,
           location: {
             lat: inserted.latitude,
             lon: inserted.longitude,
@@ -238,6 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const vehicle = await storage.upsertVehicle(vehicleData);
+      
+      // Update cache to avoid stale data
+      updateVehicleMetadataCache(vehicleId, name || vehicleId, color || "#3b82f6");
+      log(`Updated vehicle metadata cache for ${vehicleId}`, "cache");
+      
       res.json(vehicle);
     } catch (error: any) {
       res.status(400).json({ error: error.message });

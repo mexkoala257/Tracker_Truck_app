@@ -92,21 +92,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllVehicleLatestLocations(): Promise<VehicleLocation[]> {
-    // Get distinct vehicle IDs and their latest location
-    const locations = await db
-      .select()
-      .from(vehicleLocations)
-      .orderBy(desc(vehicleLocations.timestamp));
+    // Use PostgreSQL DISTINCT ON to efficiently get latest location per vehicle
+    // This is much more efficient than fetching all records and filtering in memory
+    const result = await db.execute(sql`
+      SELECT DISTINCT ON (vehicle_id) *
+      FROM vehicle_locations
+      ORDER BY vehicle_id, timestamp DESC
+    `);
     
-    // Group by vehicleId and keep only the latest for each
-    const latestByVehicle = new Map<string, VehicleLocation>();
-    for (const loc of locations) {
-      if (!latestByVehicle.has(loc.vehicleId)) {
-        latestByVehicle.set(loc.vehicleId, loc);
-      }
-    }
-    
-    return Array.from(latestByVehicle.values());
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      vehicleId: row.vehicle_id,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      speed: row.speed,
+      heading: row.heading,
+      status: row.status,
+      timestamp: new Date(row.timestamp),
+      receivedAt: row.received_at ? new Date(row.received_at) : new Date(),
+    }));
   }
 
   async getAllVehicleLocations(filters?: { startDate?: Date; endDate?: Date; vehicleId?: string }): Promise<VehicleLocation[]> {
