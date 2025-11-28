@@ -28,6 +28,7 @@ interface VehicleData {
 interface TrackingMapProps {
   data: VehicleData[];
   onVehicleUpdate?: () => void;
+  readOnly?: boolean;
 }
 
 // Component to fit map bounds to show all vehicles (within restricted area)
@@ -40,7 +41,7 @@ function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
         vehicles.map(v => [v.location.lat, v.location.lon])
       );
       // Fit bounds but don't zoom in too much or out beyond our region
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11, minZoom: 7 });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
     }
   }, [vehicles.length, map]);
   
@@ -75,7 +76,7 @@ const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: s
   });
 };
 
-export default function TrackingMap({ data, onVehicleUpdate }: TrackingMapProps) {
+export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const loadedVehicles = useRef<Set<string>>(new Set());
   const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
@@ -227,15 +228,17 @@ export default function TrackingMap({ data, onVehicleUpdate }: TrackingMapProps)
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vehicle.color }} />
                   <div className="text-xs font-bold">{vehicle.name || vehicle.id}</div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => setEditingVehicle(vehicle)}
-                  data-testid={`button-edit-vehicle-${vehicle.id}`}
-                >
-                  <Pencil className="w-3 h-3" />
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setEditingVehicle(vehicle)}
+                    data-testid={`button-edit-vehicle-${vehicle.id}`}
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                )}
               </div>
               <div className="text-[10px] text-muted-foreground">
                 {vehicle.speed} mph • {vehicle.status}
