@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite } from "lucide-react";
-import { Link } from "wouter";
-import { Button } from "@/components/ui/button";
 
 export default function MapView() {
   const [vehicleData, setVehicleData] = useState<{
@@ -78,17 +76,6 @@ export default function MapView() {
 
       {/* Minimal overlay controls */}
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-3">
-        <Link href="/">
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="bg-background/90 backdrop-blur-sm border border-border shadow-lg"
-            data-testid="link-dashboard"
-          >
-            ← Dashboard
-          </Button>
-        </Link>
-        
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-background/90 backdrop-blur-sm shadow-lg ${
           isConnected 
             ? 'border-green-500/30' 
