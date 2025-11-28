@@ -5,11 +5,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import TrackingDashboard from "@/pages/TrackingDashboard";
+import MapView from "@/pages/MapView";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={TrackingDashboard} />
+      <Route path="/map" component={MapView} />
       <Route component={NotFound} />
     </Switch>
   );

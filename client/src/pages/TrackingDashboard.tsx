@@ -3,9 +3,10 @@ import TrackingMap from "@/components/TrackingMap";
 import WebhookSimulator from "@/components/WebhookSimulator";
 import ExportDialog from "@/components/ExportDialog";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu } from "lucide-react";
+import { Radio, Satellite, Activity, LayoutDashboard, Settings, Truck, Menu, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Link } from "wouter";
 
 export default function TrackingDashboard() {
   const [vehicleData, setVehicleData] = useState<{
@@ -153,6 +154,12 @@ export default function TrackingDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Link href="/map">
+              <Button variant="outline" size="sm" className="gap-2" data-testid="link-map-view">
+                <Map className="w-4 h-4" />
+                <span className="hidden sm:inline">Map View</span>
+              </Button>
+            </Link>
             <ExportDialog />
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${
               isConnected 
