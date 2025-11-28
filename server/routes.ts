@@ -13,6 +13,21 @@ const wsClients = new Set<WebSocket>();
 const vehicleMetadataCache = new Map<string, { name: string; color: string }>();
 let metadataCacheInitialized = false;
 
+// Throttle location updates - track last update time per vehicle
+const LOCATION_UPDATE_INTERVAL_MS = 90 * 1000; // 90 seconds
+const lastUpdateTime = new Map<string, number>();
+
+function shouldProcessLocationUpdate(vehicleId: string): boolean {
+  const now = Date.now();
+  const lastUpdate = lastUpdateTime.get(vehicleId) || 0;
+  
+  if (now - lastUpdate >= LOCATION_UPDATE_INTERVAL_MS) {
+    lastUpdateTime.set(vehicleId, now);
+    return true;
+  }
+  return false;
+}
+
 async function initVehicleMetadataCache() {
   if (metadataCacheInitialized) return;
   try {
@@ -135,8 +150,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Transform Motive payload to our schema
+      const vehicleId = String(webhookData.vehicle_id || webhookData.vehicle_number || "unknown");
+      
+      // Throttle: Only process if 90 seconds have passed since last update for this vehicle
+      if (!shouldProcessLocationUpdate(vehicleId)) {
+        log(`Throttled update for vehicle ${vehicleId} - too soon since last update`, "webhook");
+        return res.status(200).json({ 
+          success: true, 
+          message: "Update throttled - waiting for 90 second interval" 
+        });
+      }
+      
       const locationData = {
-        vehicleId: String(webhookData.vehicle_id || webhookData.vehicle_number || "unknown"),
+        vehicleId,
         latitude: webhookData.lat,
         longitude: webhookData.lon,
         speed: webhookData.speed || 0,
