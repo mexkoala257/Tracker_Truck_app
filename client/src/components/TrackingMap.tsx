@@ -78,32 +78,37 @@ const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: s
 
 export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
-  const loadedVehicles = useRef<Set<string>>(new Set());
+  const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
   const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
 
-  useEffect(() => {
-    const loadTrails = async () => {
-      const vehiclesToLoad = data.filter(v => !loadedVehicles.current.has(v.id));
-      
-      for (const vehicle of vehiclesToLoad) {
-        try {
-          const response = await fetch(`/api/vehicles/${vehicle.id}/history?limit=20`);
-          if (response.ok) {
-            const history = await response.json();
-            setVehicleTrails(prev => ({
-              ...prev,
-              [vehicle.id]: history.map((h: any) => h.location)
-            }));
-            loadedVehicles.current.add(vehicle.id);
-          }
-        } catch (error) {
-          console.error(`Failed to load trail for ${vehicle.id}:`, error);
-        }
+  // Lazy-load trail only when user clicks on a vehicle (saves API calls)
+  const loadTrailForVehicle = async (vehicleId: string) => {
+    // Skip if already loaded or currently loading
+    if (vehicleTrails[vehicleId] || loadingTrails.has(vehicleId)) {
+      return;
+    }
+    
+    setLoadingTrails(prev => new Set(prev).add(vehicleId));
+    
+    try {
+      const response = await fetch(`/api/vehicles/${vehicleId}/history?limit=20`);
+      if (response.ok) {
+        const history = await response.json();
+        setVehicleTrails(prev => ({
+          ...prev,
+          [vehicleId]: history.map((h: any) => h.location)
+        }));
       }
-    };
-
-    loadTrails();
-  }, [data.map(v => v.id).join(',')]);
+    } catch (error) {
+      console.error(`Failed to load trail for ${vehicleId}:`, error);
+    } finally {
+      setLoadingTrails(prev => {
+        const next = new Set(prev);
+        next.delete(vehicleId);
+        return next;
+      });
+    }
+  };
 
   if (data.length === 0) {
     return (
@@ -180,6 +185,9 @@ export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }:
             <Marker 
               position={[vehicle.location.lat, vehicle.location.lon]} 
               icon={createTruckIcon(vehicle.heading, vehicle.name || vehicle.id, vehicle.color)}
+              eventHandlers={{
+                click: () => loadTrailForVehicle(vehicle.id),
+              }}
             >
               <Popup className="custom-popup">
                 <div className="p-2 min-w-[200px]">
@@ -222,7 +230,11 @@ export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }:
         
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {data.map((vehicle) => (
-            <div key={vehicle.id} className="bg-secondary/50 p-2 rounded border border-border/50">
+            <div 
+              key={vehicle.id} 
+              className="bg-secondary/50 p-2 rounded border border-border/50 cursor-pointer hover:bg-secondary/70 transition-colors"
+              onMouseEnter={() => loadTrailForVehicle(vehicle.id)}
+            >
               <div className="flex items-center justify-between gap-2 mb-1">
                 <div className="flex items-center gap-2 flex-1">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vehicle.color }} />

@@ -17,6 +17,13 @@ let metadataCacheInitialized = false;
 const LOCATION_UPDATE_INTERVAL_MS = 90 * 1000; // 90 seconds
 const lastUpdateTime = new Map<string, number>();
 
+// Cache for latest vehicle locations (avoids DB hit on every dashboard load)
+const LOCATION_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+let locationCache: { data: any[]; timestamp: number } | null = null;
+
+// Cache for last known coordinates (to skip duplicate location inserts)
+const lastKnownCoords = new Map<string, { lat: number; lon: number }>();
+
 function shouldProcessLocationUpdate(vehicleId: string): boolean {
   const now = Date.now();
   const lastUpdate = lastUpdateTime.get(vehicleId) || 0;
@@ -26,6 +33,26 @@ function shouldProcessLocationUpdate(vehicleId: string): boolean {
     return true;
   }
   return false;
+}
+
+// Check if location has actually changed (skip duplicate writes)
+function hasLocationChanged(vehicleId: string, lat: number, lon: number): boolean {
+  const lastCoords = lastKnownCoords.get(vehicleId);
+  if (!lastCoords) {
+    lastKnownCoords.set(vehicleId, { lat, lon });
+    return true;
+  }
+  // Consider unchanged if within ~10 meters (0.0001 degrees)
+  const threshold = 0.0001;
+  if (Math.abs(lastCoords.lat - lat) < threshold && Math.abs(lastCoords.lon - lon) < threshold) {
+    return false;
+  }
+  lastKnownCoords.set(vehicleId, { lat, lon });
+  return true;
+}
+
+function invalidateLocationCache() {
+  locationCache = null;
 }
 
 async function initVehicleMetadataCache() {
@@ -154,31 +181,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Throttle: Only process if 90 seconds have passed since last update for this vehicle
       if (!shouldProcessLocationUpdate(vehicleId)) {
-        log(`Throttled update for vehicle ${vehicleId} - too soon since last update`, "webhook");
+        if (process.env.NODE_ENV !== 'production') {
+          log(`Throttled update for vehicle ${vehicleId}`, "webhook");
+        }
         return res.status(200).json({ 
           success: true, 
           message: "Update throttled - waiting for 90 second interval" 
         });
       }
       
+      const lat = webhookData.lat;
+      const lon = webhookData.lon;
+      
+      // Validate lat/lon before dedup check
+      if (typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) {
+        log(`Invalid lat/lon for vehicle ${vehicleId}: lat=${lat}, lon=${lon}`, "webhook");
+        return res.status(400).json({ 
+          success: false, 
+          error: "Invalid latitude or longitude" 
+        });
+      }
+      
+      // Skip if location hasn't changed significantly (saves DB writes)
+      if (!hasLocationChanged(vehicleId, lat, lon)) {
+        if (process.env.NODE_ENV !== 'production') {
+          log(`Skipped duplicate location for vehicle ${vehicleId}`, "webhook");
+        }
+        return res.status(200).json({ 
+          success: true, 
+          message: "Location unchanged - skipped" 
+        });
+      }
+      
       const locationData = {
         vehicleId,
-        latitude: webhookData.lat,
-        longitude: webhookData.lon,
+        latitude: lat,
+        longitude: lon,
         speed: webhookData.speed || 0,
         heading: webhookData.bearing || 0,
         status: webhookData.type || "unknown",
         timestamp: new Date(webhookData.located_at || Date.now()),
       };
 
-      log(`Parsed location data: ${JSON.stringify(locationData)}`, "webhook");
+      if (process.env.NODE_ENV !== 'production') {
+        log(`Parsed location data: ${JSON.stringify(locationData)}`, "webhook");
+      }
 
       // Validate with Zod
       const validated = insertVehicleLocationSchema.parse(locationData);
 
       // Store in database
       const inserted = await storage.insertVehicleLocation(validated);
-      log(`Stored in database with ID: ${inserted.id}`, "webhook");
+      
+      // Invalidate location cache since we have new data
+      invalidateLocationCache();
+      
+      if (process.env.NODE_ENV !== 'production') {
+        log(`Stored in database with ID: ${inserted.id}`, "webhook");
+      }
 
       // Get vehicle metadata from cache (no DB lookup!)
       const vehicleMeta = getVehicleMetadata(inserted.vehicleId);
@@ -296,6 +356,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update cache to avoid stale data
       updateVehicleMetadataCache(vehicleId, name || vehicleId, color || "#3b82f6");
+      
+      // Invalidate location cache so updated name/color is reflected immediately
+      locationCache = null;
+      
       log(`Updated vehicle metadata cache for ${vehicleId}`, "cache");
       
       res.json(vehicle);
@@ -317,24 +381,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all vehicles with their latest locations
   app.get("/api/vehicles", async (req, res) => {
     try {
+      const now = Date.now();
+      
+      // Return cached data if still valid (30 second TTL)
+      if (locationCache && (now - locationCache.timestamp) < LOCATION_CACHE_TTL_MS) {
+        return res.json(locationCache.data);
+      }
+      
       const locations = await storage.getAllVehicleLatestLocations();
-      const vehiclesMeta = await storage.getAllVehicles();
       
-      const vehiclesMap = new Map(vehiclesMeta.map(v => [v.vehicleId, v]));
+      // Use metadata cache instead of DB query
+      const result = locations.map((loc: VehicleLocation) => {
+        const meta = getVehicleMetadata(loc.vehicleId);
+        return {
+          id: loc.vehicleId,
+          name: meta.name,
+          color: meta.color,
+          location: {
+            lat: loc.latitude,
+            lon: loc.longitude,
+          },
+          speed: loc.speed,
+          heading: loc.heading,
+          status: loc.status,
+          timestamp: loc.timestamp.toISOString(),
+        };
+      });
       
-      res.json(locations.map((loc: VehicleLocation) => ({
-        id: loc.vehicleId,
-        name: vehiclesMap.get(loc.vehicleId)?.name || loc.vehicleId,
-        color: vehiclesMap.get(loc.vehicleId)?.color || "#3b82f6",
-        location: {
-          lat: loc.latitude,
-          lon: loc.longitude,
-        },
-        speed: loc.speed,
-        heading: loc.heading,
-        status: loc.status,
-        timestamp: loc.timestamp.toISOString(),
-      })));
+      // Cache the result
+      locationCache = { data: result, timestamp: now };
+      
+      res.json(result);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
