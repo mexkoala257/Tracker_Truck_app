@@ -216,49 +216,6 @@ export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }:
           </div>
         ))}
       </MapContainer>
-      
-      <div className="absolute top-4 right-4 z-[1000] bg-card/90 backdrop-blur-md border border-border p-4 rounded-lg shadow-xl w-64">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Live Tracking</span>
-          </div>
-          <span className="text-[10px] font-mono text-muted-foreground opacity-70">
-            {data.length} {data.length === 1 ? 'Vehicle' : 'Vehicles'}
-          </span>
-        </div>
-        
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {data.map((vehicle) => (
-            <div 
-              key={vehicle.id} 
-              className="bg-secondary/50 p-2 rounded border border-border/50 cursor-pointer hover:bg-secondary/70 transition-colors"
-              onMouseEnter={() => loadTrailForVehicle(vehicle.id)}
-            >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: vehicle.color }} />
-                  <div className="text-xs font-bold">{vehicle.name || vehicle.id}</div>
-                </div>
-                {!readOnly && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setEditingVehicle(vehicle)}
-                    data-testid={`button-edit-vehicle-${vehicle.id}`}
-                  >
-                    <Pencil className="w-3 h-3" />
-                  </Button>
-                )}
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                {vehicle.speed} mph • {vehicle.status}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {editingVehicle && (
         <EditVehicleDialog
