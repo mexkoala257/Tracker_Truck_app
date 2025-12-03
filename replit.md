@@ -142,3 +142,27 @@ Two primary tables defined in `shared/schema.ts`:
 - Session management via `connect-pg-simple` (PostgreSQL session store)
 - Raw body preservation middleware for webhook signature verification
 - WebSocket path: `/ws` with same-origin policy
+
+### Cost Optimizations
+
+**Server-Side Caching:**
+- `/api/vehicles` endpoint cached for 30 seconds to reduce database hits
+- Vehicle metadata (names, colors) cached in memory to avoid repeated DB queries
+- Cache invalidated on webhook updates and metadata changes
+
+**Webhook Throttling:**
+- 90-second minimum interval between updates per vehicle (saves ~88% of webhook processing)
+- Location deduplication: skip DB writes if coordinates unchanged by more than ~10 meters
+
+**Lazy Loading:**
+- Vehicle history trails loaded only on user interaction (click marker or hover sidebar)
+- Reduces API calls from N (all vehicles) to 1 (clicked vehicle) on page load
+
+**Logging:**
+- Verbose webhook/cache logs suppressed in production mode
+- Critical errors still logged
+
+**Estimated Costs:**
+- 10 vehicles: ~$0.50/month
+- 50 vehicles: ~$3.50/month
+- 200 vehicles: ~$27/month
