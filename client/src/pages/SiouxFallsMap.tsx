@@ -4,8 +4,8 @@ import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, MapPin } from "lucide-react";
 
 const SIOUX_FALLS_BOUNDS = {
-  southwest: [43.4, -97.0] as [number, number],
-  northeast: [43.7, -96.5] as [number, number]
+  southwest: [43.12, -97.33] as [number, number],
+  northeast: [43.98, -96.13] as [number, number]
 };
 
 const SIOUX_FALLS_CENTER: [number, number] = [43.55, -96.73];
@@ -91,8 +91,8 @@ export default function SiouxFallsMap() {
           data={vehicleData} 
           onVehicleUpdate={loadVehicles}
           center={SIOUX_FALLS_CENTER}
-          zoom={11}
-          minZoom={10}
+          zoom={10}
+          minZoom={9}
           maxZoom={17}
           bounds={SIOUX_FALLS_BOUNDS}
         />
