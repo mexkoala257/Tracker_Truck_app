@@ -25,10 +25,20 @@ interface VehicleData {
   heading?: number;
 }
 
+interface MapBounds {
+  southwest: [number, number];
+  northeast: [number, number];
+}
+
 interface TrackingMapProps {
   data: VehicleData[];
   onVehicleUpdate?: () => void;
   readOnly?: boolean;
+  center?: [number, number];
+  zoom?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  bounds?: MapBounds;
 }
 
 // Component to fit map bounds to show all vehicles (within restricted area)
@@ -76,7 +86,21 @@ const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: s
   });
 };
 
-export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }: TrackingMapProps) {
+const DEFAULT_BOUNDS: MapBounds = {
+  southwest: [42.5, -104.5],
+  northeast: [46.0, -94.0]
+};
+
+export default function TrackingMap({ 
+  data, 
+  onVehicleUpdate, 
+  readOnly = false,
+  center = [44.5, -99.0],
+  zoom = 7,
+  minZoom = 6,
+  maxZoom = 15,
+  bounds = DEFAULT_BOUNDS
+}: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
   const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
@@ -121,10 +145,9 @@ export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }:
     );
   }
 
-  // South Dakota and part of Minnesota bounds
-  const southDakotaBounds: L.LatLngBoundsExpression = [
-    [42.5, -104.5], // Southwest corner
-    [46.0, -94.0]   // Northeast corner (extends into Minnesota)
+  const mapBounds: L.LatLngBoundsExpression = [
+    bounds.southwest,
+    bounds.northeast
   ];
 
   const handleSaveVehicle = async (vehicleId: string, name: string, color: string) => {
@@ -151,11 +174,11 @@ export default function TrackingMap({ data, onVehicleUpdate, readOnly = false }:
   return (
     <div className="h-full w-full rounded-xl overflow-hidden border border-border shadow-2xl relative z-0 group">
       <MapContainer
-        center={[44.5, -99.0]}
-        zoom={7}
-        minZoom={6}
-        maxZoom={15}
-        maxBounds={southDakotaBounds}
+        center={center}
+        zoom={zoom}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
+        maxBounds={mapBounds}
         maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="h-full w-full bg-background"
