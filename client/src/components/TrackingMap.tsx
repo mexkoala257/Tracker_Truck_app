@@ -40,6 +40,7 @@ interface TrackingMapProps {
   maxZoom?: number;
   bounds?: MapBounds;
   onZoomChange?: (zoom: number) => void;
+  autoFitBounds?: boolean;
 }
 
 // Component to fit map bounds to show all vehicles (within restricted area)
@@ -131,7 +132,8 @@ export default function TrackingMap({
   minZoom = 6,
   maxZoom = 15,
   bounds = DEFAULT_BOUNDS,
-  onZoomChange
+  onZoomChange,
+  autoFitBounds = true
 }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
@@ -221,7 +223,7 @@ export default function TrackingMap({
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        <MapBoundsFitter vehicles={data} />
+        {autoFitBounds && <MapBoundsFitter vehicles={data} />}
         <ZoomHandler onZoomChange={onZoomChange} />
         <ZoomSetter zoom={zoom} />
 

@@ -131,6 +131,7 @@ export default function SiouxFallsMap() {
           maxZoom={MAX_ZOOM}
           bounds={SIOUX_FALLS_BOUNDS}
           onZoomChange={handleZoomChange}
+          autoFitBounds={false}
         />
       ) : (
         <div className="h-full w-full flex flex-col items-center justify-center bg-background text-muted-foreground">
