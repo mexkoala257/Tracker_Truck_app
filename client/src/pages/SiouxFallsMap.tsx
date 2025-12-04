@@ -174,7 +174,7 @@ export default function SiouxFallsMap() {
         </div>
       )}
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-background/90 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 flex items-center gap-3">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-background/50 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
