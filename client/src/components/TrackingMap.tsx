@@ -39,6 +39,7 @@ interface TrackingMapProps {
   minZoom?: number;
   maxZoom?: number;
   bounds?: MapBounds;
+  onZoomChange?: (zoom: number) => void;
 }
 
 // Component to fit map bounds to show all vehicles (within restricted area)
@@ -50,10 +51,40 @@ function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
       const bounds = L.latLngBounds(
         vehicles.map(v => [v.location.lat, v.location.lon])
       );
-      // Fit bounds but don't zoom in too much or out beyond our region
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
     }
   }, [vehicles.length, map]);
+  
+  return null;
+}
+
+function ZoomHandler({ onZoomChange }: { onZoomChange?: (zoom: number) => void }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (!onZoomChange) return;
+    
+    const handleZoom = () => {
+      onZoomChange(map.getZoom());
+    };
+    
+    map.on('zoomend', handleZoom);
+    return () => {
+      map.off('zoomend', handleZoom);
+    };
+  }, [map, onZoomChange]);
+  
+  return null;
+}
+
+function ZoomSetter({ zoom }: { zoom: number }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (map.getZoom() !== zoom) {
+      map.setZoom(zoom);
+    }
+  }, [zoom, map]);
   
   return null;
 }
@@ -99,7 +130,8 @@ export default function TrackingMap({
   zoom = 7,
   minZoom = 6,
   maxZoom = 15,
-  bounds = DEFAULT_BOUNDS
+  bounds = DEFAULT_BOUNDS,
+  onZoomChange
 }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
@@ -190,6 +222,8 @@ export default function TrackingMap({
         />
 
         <MapBoundsFitter vehicles={data} />
+        <ZoomHandler onZoomChange={onZoomChange} />
+        <ZoomSetter zoom={zoom} />
 
         {data.map((vehicle) => (
           <div key={vehicle.id}>
