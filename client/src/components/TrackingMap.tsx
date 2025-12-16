@@ -308,6 +308,7 @@ export default function TrackingMap({
         <Marker 
           position={[HOME_BASE.lat, HOME_BASE.lon]} 
           icon={createHomeBaseIcon()}
+          zIndexOffset={1000}
         >
           <Popup className="custom-popup">
             <div className="p-2 min-w-[180px]">
