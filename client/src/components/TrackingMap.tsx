@@ -160,17 +160,17 @@ const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: s
 };
 
 const DEFAULT_BOUNDS: MapBounds = {
-  southwest: [42.5, -104.5],
-  northeast: [46.0, -94.0]
+  southwest: [43.0, -100.5],
+  northeast: [45.5, -96.0]
 };
 
 export default function TrackingMap({ 
   data, 
   onVehicleUpdate, 
   readOnly = false,
-  center = [44.5, -99.0],
-  zoom = 7,
-  minZoom = 6,
+  center = [44.25, -98.25],
+  zoom = 8,
+  minZoom = 7,
   maxZoom = 15,
   bounds = DEFAULT_BOUNDS,
   onZoomChange,
