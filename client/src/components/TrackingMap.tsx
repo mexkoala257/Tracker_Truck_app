@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Truck, Navigation, MapPin, Pencil } from "lucide-react";
+import { Truck, Navigation, MapPin, Pencil, Home } from "lucide-react";
 import { renderToString } from "react-dom/server";
 import { Button } from "@/components/ui/button";
 import EditVehicleDialog from "./EditVehicleDialog";
@@ -89,6 +89,36 @@ function ZoomSetter({ zoom }: { zoom: number }) {
   
   return null;
 }
+
+// Home Base location - 107 Opportunity Drive, Arlington, SD 57212
+const HOME_BASE = {
+  lat: 44.3792,
+  lon: -97.1406,
+  name: "Home Base",
+  address: "107 Opportunity Dr, Arlington, SD"
+};
+
+// Home Base Icon
+const createHomeBaseIcon = () => {
+  const iconHtml = renderToString(
+    <div className="relative flex items-center justify-center w-12 h-12">
+      <div className="relative w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center shadow-lg border-2 border-amber-300"
+           style={{ boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)' }}>
+        <Home className="w-5 h-5 text-white" />
+      </div>
+      <div className="absolute -bottom-2 bg-background/90 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border border-border shadow-sm whitespace-nowrap">
+        Home Base
+      </div>
+    </div>
+  );
+
+  return L.divIcon({
+    html: iconHtml,
+    className: "custom-marker-icon",
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
+  });
+};
 
 // Custom Truck Icon
 const createTruckIcon = (heading: number = 0, name: string = "Vehicle", color: string = "#3b82f6") => {
@@ -274,6 +304,23 @@ export default function TrackingMap({
             </Marker>
           </div>
         ))}
+
+        <Marker 
+          position={[HOME_BASE.lat, HOME_BASE.lon]} 
+          icon={createHomeBaseIcon()}
+        >
+          <Popup className="custom-popup">
+            <div className="p-2 min-w-[180px]">
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                <Home className="w-4 h-4 text-amber-500" />
+                <span className="font-bold text-sm">{HOME_BASE.name}</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {HOME_BASE.address}
+              </div>
+            </div>
+          </Popup>
+        </Marker>
       </MapContainer>
 
       {editingVehicle && (
