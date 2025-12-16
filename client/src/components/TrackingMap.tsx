@@ -43,6 +43,17 @@ interface TrackingMapProps {
   autoFitBounds?: boolean;
 }
 
+// Calculate responsive minZoom based on screen size
+function getResponsiveMinZoom(baseMinZoom: number): number {
+  if (typeof window === 'undefined') return baseMinZoom;
+  
+  const width = window.innerWidth;
+  if (width >= 2560) return baseMinZoom + 2; // 4K displays
+  if (width >= 1920) return baseMinZoom + 1; // Large displays
+  if (width >= 1440) return baseMinZoom + 1; // Medium-large displays
+  return baseMinZoom;
+}
+
 // Component to fit map bounds to show all vehicles (within restricted area)
 function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
   const map = useMap();
@@ -214,6 +225,9 @@ export default function TrackingMap({
     bounds.northeast
   ];
 
+  const responsiveMinZoom = getResponsiveMinZoom(minZoom);
+  const responsiveZoom = Math.max(zoom, responsiveMinZoom);
+
   const handleSaveVehicle = async (vehicleId: string, name: string, color: string) => {
     try {
       const response = await fetch(`/api/vehicles/${vehicleId}`, {
@@ -239,8 +253,8 @@ export default function TrackingMap({
     <div className="h-full w-full rounded-xl overflow-hidden border border-border shadow-2xl relative z-0 group">
       <MapContainer
         center={center}
-        zoom={zoom}
-        minZoom={minZoom}
+        zoom={responsiveZoom}
+        minZoom={responsiveMinZoom}
         maxZoom={maxZoom}
         maxBounds={mapBounds}
         maxBoundsViscosity={1.0}
