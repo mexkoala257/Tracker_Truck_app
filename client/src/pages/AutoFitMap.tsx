@@ -60,30 +60,12 @@ export default function AutoFitMap() {
     });
   });
 
-  const dynamicBounds = useMemo(() => {
-    if (vehicleData.length === 0) {
-      return {
-        southwest: [43.0, -100.5] as [number, number],
-        northeast: [45.5, -96.0] as [number, number]
-      };
-    }
-
-    const lats = vehicleData.map(v => v.location.lat);
-    const lons = vehicleData.map(v => v.location.lon);
-    
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLon = Math.min(...lons);
-    const maxLon = Math.max(...lons);
-    
-    const latPadding = Math.max((maxLat - minLat) * 0.3, 0.05);
-    const lonPadding = Math.max((maxLon - minLon) * 0.3, 0.05);
-    
+  const wideBounds = useMemo(() => {
     return {
-      southwest: [minLat - latPadding, minLon - lonPadding] as [number, number],
-      northeast: [maxLat + latPadding, maxLon + lonPadding] as [number, number]
+      southwest: [40.0, -105.0] as [number, number],
+      northeast: [50.0, -90.0] as [number, number]
     };
-  }, [vehicleData]);
+  }, []);
 
   const dynamicCenter = useMemo((): [number, number] => {
     if (vehicleData.length === 0) {
@@ -101,8 +83,8 @@ export default function AutoFitMap() {
           data={vehicleData} 
           onVehicleUpdate={loadVehicles}
           center={dynamicCenter}
-          bounds={dynamicBounds}
-          zoom={10}
+          bounds={wideBounds}
+          zoom={8}
           minZoom={5}
           maxZoom={18}
           autoFitBounds={true}
