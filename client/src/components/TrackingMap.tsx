@@ -63,9 +63,9 @@ function MapBoundsFitter({ vehicles }: { vehicles: VehicleData[] }) {
       const bounds = L.latLngBounds(
         vehicles.map(v => [v.location.lat, v.location.lon])
       );
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 11 });
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
     }
-  }, [vehicles.length, map]);
+  }, [vehicles, map]);
   
   return null;
 }
