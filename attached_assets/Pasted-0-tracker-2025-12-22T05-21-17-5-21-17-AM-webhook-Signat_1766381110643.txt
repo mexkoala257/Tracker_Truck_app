@@ -1,0 +1,20 @@
+0|tracker- | 2025-12-22T05:21:17: 5:21:17 AM [webhook] Signature validation: ✅ VALID
+0|tracker- | 2025-12-22T05:21:17: 5:21:17 AM [webhook] ⚠️ Accepting request anyway for debugging
+0|tracker- | 2025-12-22T05:21:17: 5:21:17 AM [express] POST /api/webhooks/motive 200 in 3ms :: {"success":true,"message":"Update throt…
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] 🚨 WEBHOOK RECEIVED from Motive!
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] Headers: {"connection":"upgrade","host":"72.62.81.26","x-real-ip":"35.170.6.31","x-forwarded-for":"35.170.6.31","x-forwarded-proto":"http","content-length":"377","user-agent":"Go-http-client/1.1","content-type":"application/json","x-kt-webhook-signature":"3f7fc126dc956120399184cfd63868bb8a4f6a25","accept-encoding":"gzip"}
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] Body: {"id":"77c64299-a114-42cf-9e73-f2ca4e2cdb90","vehicle_id":1984895,"vehicle_number":"T55","located_at":"2025-12-22T05:19:29Z","lat":43.5447857,"lon":-96.7647224,"bearing":236.2,"engine_hours":580.58908083,"type":"breadcrumb","description":"Sioux Falls, SD","speed":null,"odometer":6960.538911755,"fuel":836.1770985471885,"trigger":"created","action":"vehicle_location_received"}
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] Signature header received: 3f7fc126dc956120399184cfd63868bb8a4f6a25
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] Signature validation: ✅ VALID
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [webhook] ⚠️ Accepting request anyway for debugging
+0|tracker- | 2025-12-22T05:22:17: 5:22:17 AM [express] POST /api/webhooks/motive 200 in 2ms :: {"success":true,"message":"Update throt…
+
+0|tracker-app  | 2025-12-22T05:23:38: 5:23:38 AM [cache] Failed to initialize vehicle metadata cache: [object Object]
+0|tracker-app  | 2025-12-22T05:23:38: 5:23:38 AM [express] serving on port 5000
+0|tracker-app  | 2025-12-22T05:23:41: 5:23:41 AM [ws] WebSocket client connected
+0|tracker-app  | 2025-12-22T05:23:56: 5:23:56 AM [ws] WebSocket client disconnected
+0|tracker-app  | 2025-12-22T05:23:57: 5:23:57 AM [express] GET /api/vehicles 500 in 9ms :: {"error":""}
+0|tracker-app  | 2025-12-22T05:23:57: 5:23:57 AM [ws] WebSocket client connected
+0|tracker-app  | 2025-12-22T05:24:47: 5:24:47 AM [express] GET /api/vehicles 500 in 3ms :: {"error":""}
+0|tracker-app  | 2025-12-22T05:24:47: 5:24:47 AM [ws] WebSocket client disconnected
+0|tracker-app  | 2025-12-22T05:24:47: 5:24:47 AM [ws] WebSocket client connected
