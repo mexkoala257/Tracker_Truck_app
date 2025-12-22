@@ -121,27 +121,17 @@ export default function SiouxFallsMap() {
 
   return (
     <div className="h-screen w-screen relative bg-background">
-      {vehicleData.length > 0 ? (
-        <TrackingMap 
-          data={vehicleData} 
-          onVehicleUpdate={loadVehicles}
-          center={SIOUX_FALLS_CENTER}
-          zoom={zoom}
-          minZoom={MIN_ZOOM}
-          maxZoom={MAX_ZOOM}
-          bounds={SIOUX_FALLS_BOUNDS}
-          onZoomChange={handleZoomChange}
-          autoFitBounds={false}
-        />
-      ) : (
-        <div className="h-full w-full flex flex-col items-center justify-center bg-background text-muted-foreground">
-          <Satellite className="w-16 h-16 mb-4 animate-pulse text-primary/50" />
-          <h2 className="text-lg font-semibold mb-2">Sioux Falls Region</h2>
-          <p className="text-sm text-center max-w-md">
-            No vehicles in the Sioux Falls area. Vehicles will appear when they enter this region.
-          </p>
-        </div>
-      )}
+      <TrackingMap 
+        data={vehicleData} 
+        onVehicleUpdate={loadVehicles}
+        center={SIOUX_FALLS_CENTER}
+        zoom={zoom}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        bounds={SIOUX_FALLS_BOUNDS}
+        onZoomChange={handleZoomChange}
+        autoFitBounds={false}
+      />
 
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-3">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-background/90 backdrop-blur-sm shadow-lg border-primary/30">

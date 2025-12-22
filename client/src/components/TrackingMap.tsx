@@ -268,16 +268,6 @@ export default function TrackingMap({
     }
   };
 
-  if (data.length === 0) {
-    return (
-      <div className="h-full w-full flex items-center justify-center bg-background text-muted-foreground">
-        <div className="text-center">
-          <Truck className="w-16 h-16 mb-4 mx-auto animate-pulse text-primary/50" />
-          <p className="text-sm">No vehicles to display</p>
-        </div>
-      </div>
-    );
-  }
 
   const mapBounds: L.LatLngBoundsExpression = [
     bounds.southwest,
