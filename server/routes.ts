@@ -230,6 +230,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate with Zod
       const validated = insertVehicleLocationSchema.parse(locationData);
 
+      // Ensure vehicle exists in vehicles table (auto-create if new)
+      const existingMeta = getVehicleMetadata(vehicleId);
+      if (existingMeta.name === vehicleId) {
+        // Vehicle not in cache with a custom name, create/update entry
+        await storage.upsertVehicle({
+          vehicleId,
+          name: vehicleId, // Default name is the ID
+          color: "#3b82f6", // Default blue color
+        });
+        updateVehicleMetadataCache(vehicleId, vehicleId, "#3b82f6");
+      }
+
       // Store in database
       const inserted = await storage.insertVehicleLocation(validated);
       
