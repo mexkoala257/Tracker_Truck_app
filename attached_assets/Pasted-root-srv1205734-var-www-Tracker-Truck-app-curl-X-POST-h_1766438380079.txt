@@ -1,0 +1,55 @@
+root@srv1205734:/var/www/Tracker_Truck_app# curl -X POST https://srv1205734.hstgr.cloud/api/webhooks/motive \
+  -H "Content-Type: application/json" \
+  -d '{"action":"vehicle_location_received","vehicle_id":"test123","lat":43.5,"lon":-96.7}'
+{"success":true,"message":"Location unchanged - skipped"}root@srv1205734:/var/www/Tracker_Truck_app# 
+root@srv1205734:/var/www/Tracker_Truck_app# pm2 logs
+[TAILING] Tailing last 15 lines for [all] processes (change the value with --lines option)
+/root/.pm2/pm2.log last 15 lines:
+PM2        | 2025-12-22T20:44:55: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2025-12-22T20:44:55: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-22T20:44:55: PM2 log: pid=17783 msg=process killed
+PM2        | 2025-12-22T20:44:55: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2025-12-22T20:44:55: PM2 log: App [tracker-app:0] online
+PM2        | 2025-12-22T20:52:16: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2025-12-22T20:52:16: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-22T20:52:16: PM2 log: pid=19511 msg=process killed
+PM2        | 2025-12-22T20:52:16: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2025-12-22T20:52:16: PM2 log: App [tracker-app:0] online
+PM2        | 2025-12-22T21:03:56: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2025-12-22T21:03:56: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2025-12-22T21:03:56: PM2 log: pid=19635 msg=process killed
+PM2        | 2025-12-22T21:03:56: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2025-12-22T21:03:56: PM2 log: App [tracker-app:0] online
+
+/root/.pm2/logs/tracker-app-error.log last 15 lines:
+/root/.pm2/logs/tracker-app-out.log last 15 lines:
+0|tracker- | 9:18:18 PM [ws] WebSocket client connected
+0|tracker- | 9:18:18 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 9:18:23 PM [ws] WebSocket client disconnected
+0|tracker- | 9:18:23 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 9:18:23 PM [ws] WebSocket client connected
+0|tracker- | 9:18:23 PM [express] GET /api/custom-locations 304 in 3ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 9:18:34 PM [webhook] 🚨 WEBHOOK RECEIVED from Motive!
+0|tracker- | 9:18:34 PM [webhook] Headers: {"connection":"upgrade","host":"srv1205734.hstgr.cloud","x-real-ip":"127.0.0.1","x-forwarded-for":"127.0.0.1","x-forwarded-proto":"https","content-length":"84","user-agent":"curl/8.14.1","accept":"*/*","content-type":"application/json"}
+0|tracker- | 9:18:34 PM [webhook] Body: {"action":"vehicle_location_received","vehicle_id":"test123","lat":43.5,"lon":-96.7}
+0|tracker- | 9:18:34 PM [webhook] Signature header received: NONE
+0|tracker- | 9:18:34 PM [webhook] ⚠️ No signature provided - accepting anyway for debugging
+0|tracker- | 9:18:34 PM [webhook] Extracted: vehicleId=test123, lat=43.5, lon=-96.7
+0|tracker- | 9:18:34 PM [express] POST /api/webhooks/motive 200 in 3ms :: {"success":true,"message":"Location unc…
+0|tracker- | 9:18:46 PM [ws] WebSocket client disconnected
+0|tracker- | 9:18:47 PM [express] GET /api/vehicles 304 in 18ms :: [{"id":"1335366","name":"T22","color":"#f73bbb…
+
+0|tracker-app  | 9:18:47 PM [ws] WebSocket client connected
+0|tracker-app  | 9:18:47 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker-app  | 9:19:01 PM [ws] WebSocket client disconnected
+0|tracker-app  | 9:19:01 PM [express] GET /api/vehicles 304 in 10ms :: [{"id":"1335366","name":"T22","color":"#f73bbb…
+0|tracker-app  | 9:19:01 PM [ws] WebSocket client connected
+0|tracker-app  | 9:19:01 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker-app  | 9:19:17 PM [ws] WebSocket client disconnected
+0|tracker-app  | 9:19:17 PM [express] GET /api/vehicles 304 in 9ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker-app  | 9:19:18 PM [ws] WebSocket client connected
+0|tracker-app  | 9:19:18 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker-app  | 9:19:23 PM [ws] WebSocket client disconnected
+0|tracker-app  | 9:19:23 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker-app  | 9:19:23 PM [ws] WebSocket client connected
+0|tracker-app  | 9:19:23 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
