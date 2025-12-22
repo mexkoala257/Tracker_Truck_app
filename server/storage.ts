@@ -5,9 +5,12 @@ import {
   type InsertVehicle,
   type VehicleLocation, 
   type InsertVehicleLocation,
+  type CustomLocation,
+  type InsertCustomLocation,
   users,
   vehicles,
-  vehicleLocations
+  vehicleLocations,
+  customLocations
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
@@ -21,6 +24,7 @@ export interface IStorage {
   upsertVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   getVehicle(vehicleId: string): Promise<Vehicle | undefined>;
   getAllVehicles(): Promise<Vehicle[]>;
+  deleteVehicle(vehicleId: string): Promise<void>;
   
   // Vehicle location methods
   insertVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation>;
@@ -28,6 +32,12 @@ export interface IStorage {
   getVehicleLocationHistory(vehicleId: string, limit?: number): Promise<VehicleLocation[]>;
   getAllVehicleLatestLocations(): Promise<VehicleLocation[]>;
   getAllVehicleLocations(filters?: { startDate?: Date; endDate?: Date; vehicleId?: string }): Promise<VehicleLocation[]>;
+  
+  // Custom location methods
+  createCustomLocation(location: InsertCustomLocation): Promise<CustomLocation>;
+  updateCustomLocation(id: number, location: Partial<InsertCustomLocation>): Promise<CustomLocation | undefined>;
+  deleteCustomLocation(id: number): Promise<void>;
+  getAllCustomLocations(): Promise<CustomLocation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -65,6 +75,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAllVehicles(): Promise<Vehicle[]> {
     return db.select().from(vehicles);
+  }
+
+  async deleteVehicle(vehicleId: string): Promise<void> {
+    await db.delete(vehicleLocations).where(eq(vehicleLocations.vehicleId, vehicleId));
+    await db.delete(vehicles).where(eq(vehicles.vehicleId, vehicleId));
   }
 
   async insertVehicleLocation(location: InsertVehicleLocation): Promise<VehicleLocation> {
@@ -136,6 +151,29 @@ export class DatabaseStorage implements IStorage {
     }
 
     return query;
+  }
+
+  // Custom location methods
+  async createCustomLocation(location: InsertCustomLocation): Promise<CustomLocation> {
+    const [result] = await db.insert(customLocations).values(location).returning();
+    return result;
+  }
+
+  async updateCustomLocation(id: number, location: Partial<InsertCustomLocation>): Promise<CustomLocation | undefined> {
+    const [result] = await db
+      .update(customLocations)
+      .set(location)
+      .where(eq(customLocations.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteCustomLocation(id: number): Promise<void> {
+    await db.delete(customLocations).where(eq(customLocations.id, id));
+  }
+
+  async getAllCustomLocations(): Promise<CustomLocation[]> {
+    return db.select().from(customLocations);
   }
 }
 

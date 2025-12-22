@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Truck, Navigation, MapPin, Pencil, Home } from "lucide-react";
+import { Truck, Navigation, MapPin, Pencil, Home, Warehouse, Star, Flag, Building } from "lucide-react";
 import { renderToString } from "react-dom/server";
 import { Button } from "@/components/ui/button";
 import EditVehicleDialog from "./EditVehicleDialog";
@@ -28,6 +28,16 @@ interface VehicleData {
 interface MapBounds {
   southwest: [number, number];
   northeast: [number, number];
+}
+
+interface CustomLocation {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  icon: string | null;
+  color: string | null;
+  description: string | null;
 }
 
 interface TrackingMapProps {
@@ -164,6 +174,39 @@ const DEFAULT_BOUNDS: MapBounds = {
   northeast: [45.5, -96.0]
 };
 
+const getIconComponent = (iconName: string) => {
+  switch (iconName) {
+    case "home": return Home;
+    case "warehouse": return Warehouse;
+    case "building": return Building;
+    case "star": return Star;
+    case "flag": return Flag;
+    default: return MapPin;
+  }
+};
+
+const createCustomLocationIcon = (name: string, iconName: string = "marker", color: string = "#ef4444") => {
+  const IconComponent = getIconComponent(iconName);
+  const iconHtml = renderToString(
+    <div className="relative flex items-center justify-center w-12 h-12">
+      <div className="relative w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-background"
+           style={{ backgroundColor: color, boxShadow: `0 4px 14px ${color}66` }}>
+        <IconComponent className="w-5 h-5 text-white" />
+      </div>
+      <div className="absolute -bottom-2 bg-background/90 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border border-border shadow-sm whitespace-nowrap">
+        {name}
+      </div>
+    </div>
+  );
+
+  return L.divIcon({
+    html: iconHtml,
+    className: "custom-marker-icon",
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
+  });
+};
+
 export default function TrackingMap({ 
   data, 
   onVehicleUpdate, 
@@ -179,6 +222,22 @@ export default function TrackingMap({
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
   const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
+  const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
+
+  // Load custom locations on mount
+  useEffect(() => {
+    const loadCustomLocations = async () => {
+      try {
+        const response = await fetch("/api/custom-locations");
+        if (response.ok) {
+          setCustomLocations(await response.json());
+        }
+      } catch (error) {
+        console.error("Error loading custom locations:", error);
+      }
+    };
+    loadCustomLocations();
+  }, []);
 
   // Lazy-load trail only when user clicks on a vehicle (saves API calls)
   const loadTrailForVehicle = async (vehicleId: string) => {
@@ -336,6 +395,35 @@ export default function TrackingMap({
             </div>
           </Popup>
         </Marker>
+
+        {customLocations.map((location) => {
+          const IconComponent = getIconComponent(location.icon || "marker");
+          return (
+            <Marker
+              key={`custom-${location.id}`}
+              position={[location.latitude, location.longitude]}
+              icon={createCustomLocationIcon(location.name, location.icon || "marker", location.color || "#ef4444")}
+              zIndexOffset={500}
+            >
+              <Popup className="custom-popup">
+                <div className="p-2 min-w-[180px]">
+                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                    <IconComponent className="w-4 h-4" style={{ color: location.color || "#ef4444" }} />
+                    <span className="font-bold text-sm">{location.name}</span>
+                  </div>
+                  {location.description && (
+                    <div className="text-xs text-muted-foreground mb-2">
+                      {location.description}
+                    </div>
+                  )}
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
+                  </div>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
 
       {editingVehicle && (

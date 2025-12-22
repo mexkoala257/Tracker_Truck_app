@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertVehicleLocationSchema, insertVehicleSchema, type VehicleLocation, type Vehicle } from "@shared/schema";
+import { insertVehicleLocationSchema, insertVehicleSchema, insertCustomLocationSchema, type VehicleLocation, type Vehicle, type CustomLocation } from "@shared/schema";
 import { log } from "./app";
 import crypto from "crypto";
 
@@ -475,6 +475,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(csv);
     } catch (error: any) {
       log(`❌ Export error: ${error.message}`, "export");
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a vehicle and all its location history
+  app.delete("/api/vehicles/:vehicleId", async (req, res) => {
+    try {
+      const { vehicleId } = req.params;
+      
+      await storage.deleteVehicle(vehicleId);
+      
+      // Remove from metadata cache
+      vehicleMetadataCache.delete(vehicleId);
+      lastKnownCoords.delete(vehicleId);
+      lastUpdateTime.delete(vehicleId);
+      
+      // Invalidate location cache
+      locationCache = null;
+      
+      log(`Deleted vehicle ${vehicleId}`, "admin");
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Custom locations routes
+  app.get("/api/custom-locations", async (req, res) => {
+    try {
+      const locations = await storage.getAllCustomLocations();
+      res.json(locations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/custom-locations", async (req, res) => {
+    try {
+      const locationData = insertCustomLocationSchema.parse(req.body);
+      const location = await storage.createCustomLocation(locationData);
+      
+      log(`Created custom location: ${location.name}`, "admin");
+      
+      res.json(location);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/custom-locations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid location ID" });
+      }
+      
+      // Validate partial update data
+      const partialSchema = insertCustomLocationSchema.partial();
+      const locationData = partialSchema.parse(req.body);
+      
+      const location = await storage.updateCustomLocation(id, locationData);
+      
+      if (!location) {
+        return res.status(404).json({ error: "Custom location not found" });
+      }
+      
+      log(`Updated custom location: ${location.name}`, "admin");
+      
+      res.json(location);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/custom-locations/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid location ID" });
+      }
+      
+      await storage.deleteCustomLocation(id);
+      
+      log(`Deleted custom location ${id}`, "admin");
+      
+      res.json({ success: true });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });

@@ -117,9 +117,11 @@ export default function TrackingDashboard() {
         </nav>
 
         <div className="mt-auto">
-          <Button variant="ghost" size="icon" className="w-full aspect-square rounded-lg text-muted-foreground hover:text-foreground">
-            <Settings className="w-5 h-5" />
-          </Button>
+          <Link href="/admin">
+            <Button variant="ghost" size="icon" className="w-full aspect-square rounded-lg text-muted-foreground hover:text-foreground" data-testid="link-admin">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
         </div>
       </aside>
 

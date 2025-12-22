@@ -50,3 +50,23 @@ export const insertVehicleLocationSchema = createInsertSchema(vehicleLocations).
 
 export type InsertVehicleLocation = z.infer<typeof insertVehicleLocationSchema>;
 export type VehicleLocation = typeof vehicleLocations.$inferSelect;
+
+// Custom map locations (warehouses, depots, landmarks, etc.)
+export const customLocations = pgTable("custom_locations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  latitude: real("latitude").notNull(),
+  longitude: real("longitude").notNull(),
+  icon: text("icon").default("marker"), // marker, warehouse, depot, home, star
+  color: text("color").default("#ef4444"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCustomLocationSchema = createInsertSchema(customLocations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCustomLocation = z.infer<typeof insertCustomLocationSchema>;
+export type CustomLocation = typeof customLocations.$inferSelect;

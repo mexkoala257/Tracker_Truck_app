@@ -9,11 +9,13 @@ import MapView from "@/pages/MapView";
 import MapEmbed from "@/pages/MapEmbed";
 import SiouxFallsMap from "@/pages/SiouxFallsMap";
 import AutoFitMap from "@/pages/AutoFitMap";
+import Admin from "@/pages/Admin";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={TrackingDashboard} />
+      <Route path="/admin" component={Admin} />
       <Route path="/map" component={MapView} />
       <Route path="/auto-fit" component={AutoFitMap} />
       <Route path="/sioux-falls" component={SiouxFallsMap} />
