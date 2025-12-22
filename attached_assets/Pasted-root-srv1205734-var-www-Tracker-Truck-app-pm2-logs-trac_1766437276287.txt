@@ -1,0 +1,118 @@
+root@srv1205734:/var/www/Tracker_Truck_app# pm2 logs tracker-app --lines 50
+[TAILING] Tailing last 50 lines for [tracker-app] process (change the value with --lines option)
+/root/.pm2/logs/tracker-app-error.log last 50 lines:
+/root/.pm2/logs/tracker-app-out.log last 50 lines:
+0|tracker- | 8:57:23 PM [ws] WebSocket client connected
+0|tracker- | 8:57:23 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:57:46 PM [ws] WebSocket client disconnected
+0|tracker- | 8:57:46 PM [express] GET /api/vehicles 304 in 8ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:57:47 PM [ws] WebSocket client connected
+0|tracker- | 8:57:47 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:58:01 PM [ws] WebSocket client disconnected
+0|tracker- | 8:58:01 PM [express] GET /api/vehicles 304 in 9ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:58:01 PM [ws] WebSocket client connected
+0|tracker- | 8:58:01 PM [express] GET /api/custom-locations 304 in 3ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:58:17 PM [ws] WebSocket client disconnected
+0|tracker- | 8:58:17 PM [express] GET /api/vehicles 304 in 9ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:58:17 PM [ws] WebSocket client connected
+0|tracker- | 8:58:17 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:58:23 PM [ws] WebSocket client disconnected
+0|tracker- | 8:58:23 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:58:23 PM [ws] WebSocket client connected
+0|tracker- | 8:58:23 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:58:46 PM [ws] WebSocket client disconnected
+0|tracker- | 8:58:47 PM [express] GET /api/vehicles 304 in 8ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:58:47 PM [ws] WebSocket client connected
+0|tracker- | 8:58:47 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:59:01 PM [ws] WebSocket client disconnected
+0|tracker- | 8:59:01 PM [express] GET /api/vehicles 304 in 8ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:59:01 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:59:01 PM [ws] WebSocket client connected
+0|tracker- | 8:59:07 PM [ws] WebSocket client disconnected
+0|tracker- | 8:59:07 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:59:07 PM [express] GET /api/custom-locations 304 in 3ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:59:07 PM [ws] WebSocket client connected
+0|tracker- | 8:59:17 PM [ws] WebSocket client disconnected
+0|tracker- | 8:59:18 PM [express] GET /api/vehicles 304 in 8ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:59:18 PM [ws] WebSocket client connected
+0|tracker- | 8:59:18 PM [express] GET /api/custom-locations 304 in 3ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:59:23 PM [ws] WebSocket client disconnected
+0|tracker- | 8:59:23 PM [express] GET /api/vehicles 304 in 0ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 8:59:23 PM [ws] WebSocket client connected
+0|tracker- | 8:59:23 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 8:59:46 PM [ws] WebSocket client disconnected
+0|tracker- | 8:59:46 PM [express] GET /api/vehicles 304 in 10ms :: [{"id":"1335366","name":"T22","color":"#f73bbb…
+0|tracker- | 8:59:47 PM [ws] WebSocket client connected
+0|tracker- | 8:59:47 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 9:00:01 PM [ws] WebSocket client disconnected
+0|tracker- | 9:00:01 PM [express] GET /api/vehicles 304 in 11ms :: [{"id":"1335366","name":"T22","color":"#f73bbb…
+0|tracker- | 9:00:01 PM [ws] WebSocket client connected
+0|tracker- | 9:00:01 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 9:00:17 PM [ws] WebSocket client disconnected
+0|tracker- | 9:00:17 PM [express] GET /api/vehicles 304 in 8ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 9:00:17 PM [ws] WebSocket client connected
+0|tracker- | 9:00:18 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+
+0|tracker-app  | 9:00:23 PM [ws] WebSocket client disconnected
+0|tracker-app  | 9:00:23 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker-app  | 9:00:23 PM [ws] WebSocket client connected
+0|tracker-app  | 9:00:23 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+^C
+root@srv1205734:/var/www/Tracker_Truck_app# sudo netstat -tlnp | grep -E ':(80|443|5000)'
+tcp        0      0 0.0.0.0:443             0.0.0.0:*               LISTEN      12509/nginx: master 
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      12509/nginx: master 
+tcp        0      0 0.0.0.0:5000            0.0.0.0:*               LISTEN      19636/node          
+root@srv1205734:/var/www/Tracker_Truck_app# curl -v -X POST https://srv1205734.hstgr.cloud/api/webhooks/motive \
+  -H "Content-Type: application/json" \
+  -d '{"action":"vehicle_location_received","vehicle":{"id":"test123"},"location":{"lat":43.5,"lon":-96.7}}'
+Note: Unnecessary use of -X or --request, POST is already inferred.
+* Host srv1205734.hstgr.cloud:443 was resolved.
+* IPv6: (none)
+* IPv4: 127.0.1.1
+*   Trying 127.0.1.1:443...
+* ALPN: curl offers h2,http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+*  CAfile: /etc/ssl/certs/ca-certificates.crt
+*  CApath: /etc/ssl/certs
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519MLKEM768 / id-ecPublicKey
+* ALPN: server accepted http/1.1
+* Server certificate:
+*  subject: CN=srv1205734.hstgr.cloud
+*  start date: Dec 22 15:25:36 2025 GMT
+*  expire date: Mar 22 15:25:35 2026 GMT
+*  subjectAltName: host "srv1205734.hstgr.cloud" matched cert's "srv1205734.hstgr.cloud"
+*  issuer: C=US; O=Let's Encrypt; CN=E8
+*  SSL certificate verify ok.
+*   Certificate level 0: Public key type EC/prime256v1 (256/128 Bits/secBits), signed using ecdsa-with-SHA384
+*   Certificate level 1: Public key type EC/secp384r1 (384/192 Bits/secBits), signed using sha256WithRSAEncryption
+*   Certificate level 2: Public key type RSA (4096/152 Bits/secBits), signed using sha256WithRSAEncryption
+* Connected to srv1205734.hstgr.cloud (127.0.1.1) port 443
+* using HTTP/1.x
+> POST /api/webhooks/motive HTTP/1.1
+> Host: srv1205734.hstgr.cloud
+> User-Agent: curl/8.14.1
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 101
+> 
+* upload completely sent off: 101 bytes
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+< HTTP/1.1 400 Bad Request
+< Server: nginx
+< Date: Mon, 22 Dec 2025 21:01:03 GMT
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 57
+< Connection: keep-alive
+< X-Powered-By: Express
+< ETag: W/"39-0rlaw+4+nM6KVY3WETOfgPQMBKs"
+< 
+* Connection #0 to host srv1205734.hstgr.cloud left intact

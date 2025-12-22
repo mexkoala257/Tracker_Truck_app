@@ -176,22 +176,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Transform Motive payload to our schema
-      const vehicleId = String(webhookData.vehicle_id || webhookData.vehicle_number || "unknown");
+      // Transform Motive payload to our schema - handle multiple payload formats
+      // Format 1: { vehicle_id, lat, lon, ... }
+      // Format 2: { vehicle: { id }, location: { lat, lon }, ... }
+      // Format 3: { vehicle: { id }, current_location: { lat, lon }, ... }
       
-      // Throttle: Only process if 90 seconds have passed since last update for this vehicle
+      let vehicleId: string;
+      let lat: number;
+      let lon: number;
+      
+      // Extract vehicle ID
+      if (webhookData.vehicle_id) {
+        vehicleId = String(webhookData.vehicle_id);
+      } else if (webhookData.vehicle_number) {
+        vehicleId = String(webhookData.vehicle_number);
+      } else if (webhookData.vehicle?.id) {
+        vehicleId = String(webhookData.vehicle.id);
+      } else if (webhookData.vehicle?.number) {
+        vehicleId = String(webhookData.vehicle.number);
+      } else {
+        vehicleId = "unknown";
+      }
+      
+      // Extract lat/lon from different possible locations
+      if (typeof webhookData.lat === 'number' && typeof webhookData.lon === 'number') {
+        lat = webhookData.lat;
+        lon = webhookData.lon;
+      } else if (webhookData.location?.lat !== undefined && webhookData.location?.lon !== undefined) {
+        lat = Number(webhookData.location.lat);
+        lon = Number(webhookData.location.lon);
+      } else if (webhookData.current_location?.lat !== undefined && webhookData.current_location?.lon !== undefined) {
+        lat = Number(webhookData.current_location.lat);
+        lon = Number(webhookData.current_location.lon);
+      } else if (webhookData.current_location?.latitude !== undefined && webhookData.current_location?.longitude !== undefined) {
+        lat = Number(webhookData.current_location.latitude);
+        lon = Number(webhookData.current_location.longitude);
+      } else if (webhookData.latitude !== undefined && webhookData.longitude !== undefined) {
+        lat = Number(webhookData.latitude);
+        lon = Number(webhookData.longitude);
+      } else {
+        log(`Could not extract lat/lon from payload: ${JSON.stringify(webhookData)}`, "webhook");
+        return res.status(400).json({ 
+          success: false, 
+          error: "Could not find latitude/longitude in payload" 
+        });
+      }
+      
+      log(`Extracted: vehicleId=${vehicleId}, lat=${lat}, lon=${lon}`, "webhook");
+      
+      // Throttle: Only process if 30 seconds have passed since last update for this vehicle
       if (!shouldProcessLocationUpdate(vehicleId)) {
         if (process.env.NODE_ENV !== 'production') {
           log(`Throttled update for vehicle ${vehicleId}`, "webhook");
         }
         return res.status(200).json({ 
           success: true, 
-          message: "Update throttled - waiting for 90 second interval" 
+          message: "Update throttled" 
         });
       }
-      
-      const lat = webhookData.lat;
-      const lon = webhookData.lon;
       
       // Validate lat/lon before dedup check
       if (typeof lat !== 'number' || typeof lon !== 'number' || !isFinite(lat) || !isFinite(lon)) {
@@ -213,14 +255,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Extract speed, heading, status, and timestamp from various payload formats
+      const speed = webhookData.speed ?? webhookData.current_location?.speed ?? 0;
+      const heading = webhookData.bearing ?? webhookData.heading ?? webhookData.current_location?.bearing ?? webhookData.current_location?.heading ?? 0;
+      const status = webhookData.type ?? webhookData.event_type ?? webhookData.status ?? "unknown";
+      const timestamp = webhookData.located_at ?? webhookData.timestamp ?? webhookData.current_location?.located_at ?? Date.now();
+      
       const locationData = {
         vehicleId,
         latitude: lat,
         longitude: lon,
-        speed: webhookData.speed || 0,
-        heading: webhookData.bearing || 0,
-        status: webhookData.type || "unknown",
-        timestamp: new Date(webhookData.located_at || Date.now()),
+        speed: Number(speed) || 0,
+        heading: Number(heading) || 0,
+        status: String(status),
+        timestamp: new Date(timestamp),
       };
 
       if (process.env.NODE_ENV !== 'production') {
