@@ -26,7 +26,7 @@ read -p "Enter your domain name (or press Enter to use server IP): " DOMAIN_NAME
 read -p "Enter database password for gps_user: " DB_PASSWORD
 read -p "Enter your Motive webhook secret: " MOTIVE_SECRET
 
-APP_DIR="/var/www/gps-tracker"
+APP_DIR="/var/www/Tracker_Truck_app"
 
 echo ""
 echo -e "${GREEN}Step 1: Updating system...${NC}"
@@ -110,17 +110,17 @@ echo -e "${GREEN}Step 12: Creating PM2 ecosystem file...${NC}"
 cat > ecosystem.config.cjs << 'EOF'
 module.exports = {
   apps: [{
-    name: 'gps-tracker',
+    name: 'tracker-app',
     script: 'dist/index.js',
-    cwd: '/var/www/gps-tracker',
+    cwd: '/var/www/Tracker_Truck_app',
     instances: 1,
     exec_mode: 'fork',
     env: {
       NODE_ENV: 'production',
       PORT: 5000
     },
-    error_file: '/var/log/pm2/gps-tracker-error.log',
-    out_file: '/var/log/pm2/gps-tracker-out.log',
+    error_file: '/var/log/pm2/tracker-app-error.log',
+    out_file: '/var/log/pm2/tracker-app-out.log',
     time: true
   }]
 };
@@ -145,7 +145,7 @@ else
     SERVER_NAME="$DOMAIN_NAME www.$DOMAIN_NAME"
 fi
 
-cat > /etc/nginx/sites-available/gps-tracker << EOF
+cat > /etc/nginx/sites-available/tracker-app << EOF
 server {
     listen 80;
     server_name $SERVER_NAME;
@@ -175,7 +175,7 @@ server {
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/gps-tracker /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/tracker-app /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
@@ -206,6 +206,6 @@ fi
 echo ""
 echo "Useful commands:"
 echo "  pm2 list              - View app status"
-echo "  pm2 logs gps-tracker  - View logs"
-echo "  pm2 restart gps-tracker - Restart app"
+echo "  pm2 logs tracker-app  - View logs"
+echo "  pm2 restart tracker-app - Restart app"
 echo ""
