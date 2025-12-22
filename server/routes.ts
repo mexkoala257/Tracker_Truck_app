@@ -14,11 +14,11 @@ const vehicleMetadataCache = new Map<string, { name: string; color: string }>();
 let metadataCacheInitialized = false;
 
 // Throttle location updates - track last update time per vehicle
-const LOCATION_UPDATE_INTERVAL_MS = 90 * 1000; // 90 seconds
+const LOCATION_UPDATE_INTERVAL_MS = 30 * 1000; // 30 seconds (was 90 seconds)
 const lastUpdateTime = new Map<string, number>();
 
 // Cache for latest vehicle locations (avoids DB hit on every dashboard load)
-const LOCATION_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+const LOCATION_CACHE_TTL_MS = 10 * 1000; // 10 seconds (was 30 seconds)
 let locationCache: { data: any[]; timestamp: number } | null = null;
 
 // Cache for last known coordinates (to skip duplicate location inserts)
