@@ -9,6 +9,9 @@ import crypto from "crypto";
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
 
+// Store recent webhook payloads for testing/debugging (last 20)
+const recentWebhooks: Array<{ timestamp: string; headers: any; body: any }> = [];
+
 // Vehicle metadata cache to avoid DB lookups on every webhook
 const vehicleMetadataCache = new Map<string, { name: string; color: string }>();
 let metadataCacheInitialized = false;
@@ -126,6 +129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`🚨 WEBHOOK RECEIVED from Motive!`, "webhook");
       log(`Headers: ${JSON.stringify(req.headers)}`, "webhook");
       log(`Body: ${JSON.stringify(req.body)}`, "webhook");
+      
+      // Store for debugging - keep last 20 webhooks
+      recentWebhooks.unshift({
+        timestamp: new Date().toISOString(),
+        headers: req.headers,
+        body: req.body
+      });
+      if (recentWebhooks.length > 20) {
+        recentWebhooks.pop();
+      }
       
       // TEMPORARILY DISABLED: Verify webhook signature for debugging
       // TODO: Re-enable signature verification after confirming webhooks work
@@ -348,6 +361,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       message: "Webhook endpoint is accessible",
       timestamp: new Date().toISOString()
     });
+  });
+
+  // Debug endpoint to view recent webhook payloads
+  app.get("/api/webhooks/debug", async (req, res) => {
+    res.json({
+      count: recentWebhooks.length,
+      webhooks: recentWebhooks
+    });
+  });
+
+  // Clear stored webhooks
+  app.delete("/api/webhooks/debug", async (req, res) => {
+    recentWebhooks.length = 0;
+    res.json({ success: true, message: "Webhook history cleared" });
   });
 
   // Get latest location for a vehicle
