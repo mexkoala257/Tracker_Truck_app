@@ -180,9 +180,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if this is a vehicle location webhook
-      if (webhookData.action !== "vehicle_location_received" && webhookData.action !== "vehicle_location_updated") {
-        log(`Ignoring webhook action: ${webhookData.action}`, "webhook");
+      // Check if this is a location webhook (vehicle or asset)
+      const action = webhookData.action || "";
+      const isLocationWebhook = action.includes("location") || 
+                                 action.includes("gps") ||
+                                 action === "vehicle_location_received" ||
+                                 action === "vehicle_location_updated" ||
+                                 action === "asset_location_received" ||
+                                 action === "asset_location_updated";
+      
+      if (!isLocationWebhook) {
+        log(`Ignoring webhook action: ${action}`, "webhook");
         return res.status(200).json({ 
           success: true, 
           message: "Webhook received but not a location update" 
@@ -198,15 +206,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let lat: number;
       let lon: number;
       
-      // Extract vehicle ID
+      // Extract vehicle or asset ID
       if (webhookData.vehicle_id) {
         vehicleId = String(webhookData.vehicle_id);
+      } else if (webhookData.asset_id) {
+        vehicleId = String(webhookData.asset_id);
       } else if (webhookData.vehicle_number) {
         vehicleId = String(webhookData.vehicle_number);
       } else if (webhookData.vehicle?.id) {
         vehicleId = String(webhookData.vehicle.id);
       } else if (webhookData.vehicle?.number) {
         vehicleId = String(webhookData.vehicle.number);
+      } else if (webhookData.asset?.id) {
+        vehicleId = String(webhookData.asset.id);
+      } else if (webhookData.asset?.number) {
+        vehicleId = String(webhookData.asset.number);
       } else {
         vehicleId = "unknown";
       }
