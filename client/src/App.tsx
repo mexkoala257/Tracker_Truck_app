@@ -10,6 +10,7 @@ import MapEmbed from "@/pages/MapEmbed";
 import SiouxFallsMap from "@/pages/SiouxFallsMap";
 import AutoFitMap from "@/pages/AutoFitMap";
 import Admin from "@/pages/Admin";
+import WebhookLog from "@/pages/WebhookLog";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/auto-fit" component={AutoFitMap} />
       <Route path="/sioux-falls" component={SiouxFallsMap} />
       <Route path="/embed" component={MapEmbed} />
+      <Route path="/webhooks" component={WebhookLog} />
       <Route component={NotFound} />
     </Switch>
   );

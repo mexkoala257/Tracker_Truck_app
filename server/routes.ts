@@ -9,7 +9,7 @@ import crypto from "crypto";
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
 
-// Store recent webhook payloads for testing/debugging (last 20)
+// Store recent webhook payloads for testing/debugging (last 50)
 const recentWebhooks: Array<{ timestamp: string; headers: any; body: any }> = [];
 
 // Vehicle metadata cache to avoid DB lookups on every webhook
@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers: req.headers,
         body: req.body
       });
-      if (recentWebhooks.length > 20) {
+      if (recentWebhooks.length > 50) {
         recentWebhooks.pop();
       }
       
