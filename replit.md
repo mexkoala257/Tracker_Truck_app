@@ -2,9 +2,9 @@
 
 ## Overview
 
-This is a real-time vehicle tracking dashboard application that integrates with Motive's GPS system via webhooks. The application receives live location updates from Motive, stores them in a PostgreSQL database, and displays vehicle positions on an interactive map with real-time updates pushed to the browser via WebSockets.
+This is a real-time vehicle and asset tracking dashboard application that integrates with Motive's Fleet Management API. The application polls Motive's API every 60 seconds to fetch vehicle and asset locations, stores them in a PostgreSQL database, and displays positions on an interactive map with real-time updates pushed to the browser via WebSockets.
 
-The system is designed as a logistics command center, providing fleet managers with instant visibility into vehicle locations, speeds, headings, and movement status.
+The system is designed as a logistics command center, providing fleet managers with instant visibility into vehicle and asset locations, speeds, headings, and movement status.
 
 ## User Preferences
 
@@ -48,21 +48,29 @@ Preferred communication style: Simple, everyday language.
 - Development/production split via separate entry points
 
 **API Endpoints:**
-- `POST /api/webhooks/motive` - Receives GPS data from Motive webhooks
+- `POST /api/poll/trigger` - Manually trigger a Motive API poll
+- `GET /api/poll/results` - Get recent poll results and status
+- `DELETE /api/poll/results` - Clear poll result history
+- `POST /api/webhooks/motive` - Legacy webhook endpoint (fallback)
 - `GET /api/vehicles` - Retrieves all latest vehicle locations
 - `GET /api/vehicles/:vehicleId` - Gets latest location for specific vehicle
 - `GET /api/vehicles/:vehicleId/history` - Fetches historical locations
 - `GET /api/vehicles/export/csv` - Exports location data as CSV
 
+**Data Ingestion (Motive API Polling):**
+- `server/motivePoller.ts` - Polling service module
+- Polls `GET /v3/vehicle_locations` for vehicles every 60 seconds
+- Polls `GET /v1/asset_locations` for assets every 60 seconds
+- Authentication via `X-Api-Key` header using MOTIVE_API_KEY secret
+- Handles pagination for large fleets (100 per page)
+- Assets prefixed with `asset-` in vehicleId to distinguish from vehicles
+- Assets default to green (#10b981), vehicles to blue (#3b82f6)
+- Preserves user-set custom names/colors (only sets defaults for new entries)
+
 **Real-time Architecture:**
 - WebSocket server runs on the same HTTP server as Express
-- Broadcasts location updates to all connected clients immediately
+- Poller broadcasts location updates to all connected clients on each poll
 - Clients auto-reconnect on connection loss
-
-**Security Considerations:**
-- Webhook signature verification using HMAC SHA-1 (Motive standard)
-- Timing-safe signature comparison to prevent timing attacks
-- Raw body preservation for signature validation
 
 ### Data Storage
 
@@ -101,10 +109,11 @@ Two primary tables defined in `shared/schema.ts`:
 ### External Dependencies
 
 **Third-Party Services:**
-- **Motive Fleet Management API** - Source of GPS webhook data
-  - Sends location updates via HTTP POST webhooks
-  - Payload includes vehicle ID, coordinates, speed, heading, status, timestamp
-  - Requires webhook signature verification for security
+- **Motive Fleet Management API** - Source of GPS location data
+  - Vehicle locations via `GET /v3/vehicle_locations` (polled every 60s)
+  - Asset locations via `GET /v1/asset_locations` (polled every 60s)
+  - Authentication via API Key (`X-Api-Key` header)
+  - Legacy webhook endpoint still available as fallback
 
 **Cloud Infrastructure:**
 - **Neon Serverless PostgreSQL** - Database hosting

@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { insertVehicleLocationSchema, insertVehicleSchema, insertCustomLocationSchema, type VehicleLocation, type Vehicle, type CustomLocation } from "@shared/schema";
 import { log } from "./app";
 import crypto from "crypto";
+import { startPolling, stopPolling, pollNow, getPollResults, clearPollResults, setBroadcastFunction } from "./motivePoller";
 
 // Store connected WebSocket clients
 const wsClients = new Set<WebSocket>();
@@ -123,7 +124,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Webhook endpoint for Motive GPS data
+  // Set up the broadcast function for the poller
+  setBroadcastFunction(async (vehicleId, data) => {
+    const vehicleMeta = getVehicleMetadata(vehicleId);
+    const message = JSON.stringify({
+      type: "location_update",
+      data: {
+        id: vehicleId,
+        name: vehicleMeta.name,
+        color: vehicleMeta.color,
+        location: {
+          lat: data.latitude,
+          lon: data.longitude,
+        },
+        speed: data.speed,
+        heading: data.heading,
+        status: data.status,
+        timestamp: data.timestamp.toISOString(),
+      }
+    });
+
+    wsClients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+
+    invalidateLocationCache();
+  });
+
+  // Start API polling
+  startPolling();
+
+  // Manual poll trigger endpoint
+  app.post("/api/poll/trigger", async (req, res) => {
+    try {
+      await pollNow();
+      res.json({ success: true, message: "Poll triggered successfully" });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get poll results
+  app.get("/api/poll/results", async (req, res) => {
+    res.json({
+      count: getPollResults().length,
+      results: getPollResults(),
+    });
+  });
+
+  // Clear poll results
+  app.delete("/api/poll/results", async (req, res) => {
+    clearPollResults();
+    res.json({ success: true, message: "Poll results cleared" });
+  });
+
+  // Webhook endpoint for Motive GPS data (kept as fallback)
   app.post("/api/webhooks/motive", async (req, res) => {
     try {
       log(`🚨 WEBHOOK RECEIVED from Motive!`, "webhook");
