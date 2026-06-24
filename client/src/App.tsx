@@ -12,6 +12,7 @@ import AutoFitMap from "@/pages/AutoFitMap";
 import Admin from "@/pages/Admin";
 import WebhookLog from "@/pages/WebhookLog";
 import RegionalSFMap from "@/pages/RegionalSFMap";
+import RegionalSFSettings from "@/pages/RegionalSFSettings";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/auto-fit" component={AutoFitMap} />
       <Route path="/sioux-falls" component={SiouxFallsMap} />
       <Route path="/regional-sf" component={RegionalSFMap} />
+      <Route path="/regional-sf/settings" component={RegionalSFSettings} />
       <Route path="/embed" component={MapEmbed} />
       <Route path="/webhooks" component={WebhookLog} />
       <Route component={NotFound} />
