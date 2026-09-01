@@ -26,9 +26,10 @@ function saveVisibleVehicles(ids: string[]) {
 
 function getSavedDarkMode(): boolean {
   try {
-    return localStorage.getItem(DARK_MODE_KEY) === "true";
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    return saved === null ? true : saved === "true";
   } catch (e) {
-    return false;
+    return true;
   }
 }
 
