@@ -1,0 +1,108 @@
+root@srv1205734:/var/www/Tracker_Truck_app# pm2 logs tracker-app --lines 50
+[TAILING] Tailing last 50 lines for [tracker-app] process (change the value with --lines option)
+/root/.pm2/logs/tracker-app-error.log last 50 lines:
+0|tracker- |       connect_timeout: 0
+0|tracker- |     },
+0|tracker- |     user: 'gps_user',
+0|tracker- |     database: 'gps_tracker',
+0|tracker- |     port: 5432,
+0|tracker- |     host: 'localhost',
+0|tracker- |     replication: undefined,
+0|tracker- |     _Promise: [Function: Promise],
+0|tracker- |     _types: TypeOverrides { _types: [Object], text: {}, binary: {} },
+0|tracker- |     _ending: true,
+0|tracker- |     _ended: false,
+0|tracker- |     _connecting: false,
+0|tracker- |     _connected: true,
+0|tracker- |     _connectionError: false,
+0|tracker- |     _queryable: false,
+0|tracker- |     enableChannelBinding: false,
+0|tracker- |     connection: Connection {
+0|tracker- |       _events: [Object: null prototype],
+0|tracker- |       _eventsCount: 23,
+0|tracker- |       _maxListeners: undefined,
+0|tracker- |       stream: [Socket],
+0|tracker- |       _keepAlive: false,
+0|tracker- |       _keepAliveInitialDelayMillis: 0,
+0|tracker- |       lastBuffer: false,
+0|tracker- |       parsedStatements: {},
+0|tracker- |       ssl: false,
+0|tracker- |       _ending: true,
+0|tracker- |       _emitMessage: false,
+0|tracker- |       _connecting: true,
+0|tracker- |       [Symbol(shapeMode)]: false,
+0|tracker- |       [Symbol(kCapture)]: false
+0|tracker- |     },
+0|tracker- |     queryQueue: [],
+0|tracker- |     binary: false,
+0|tracker- |     processID: 1956242,
+0|tracker- |     secretKey: 433160418,
+0|tracker- |     ssl: false,
+0|tracker- |     _connectionTimeoutMillis: 0,
+0|tracker- |     _connectionCallback: null,
+0|tracker- |     saslSession: null,
+0|tracker- |     release: [Function (anonymous)],
+0|tracker- |     activeQuery: null,
+0|tracker- |     readyForQuery: true,
+0|tracker- |     hasExecuted: true,
+0|tracker- |     _poolUseCount: 38,
+0|tracker- |     [Symbol(shapeMode)]: false,
+0|tracker- |     [Symbol(kCapture)]: false
+0|tracker- |   }
+0|tracker- | }
+0|tracker- | Error: ENOENT: no such file or directory, stat '/var/www/Tracker_Truck_app/dist/public/index.html'
+
+/root/.pm2/logs/tracker-app-out.log last 50 lines:
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 48082: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 48084: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 48085: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 48087: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 1335366: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing vehicle 1984895: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Vehicle poll complete: 0 locations processed from 9 vehicles
+0|tracker- | 10:42:49 PM [poller] Error processing asset 944374: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946353: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946449: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946452: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946456: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946462: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946465: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946470: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946502: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Error processing asset 946505: Hostname/IP does not match certificate's altnames: Host: localhost. is not in the cert's altnames: DNS:srv1205734.hstgr.cloud
+0|tracker- | 10:42:49 PM [poller] Asset poll complete: 0 locations processed from 10 assets
+0|tracker- | 10:42:49 PM [poller] Motive API poll complete
+0|tracker- | 10:42:54 PM [ws] WebSocket client disconnected
+0|tracker- | 10:42:54 PM [express] GET /api/vehicles 500 in 7ms :: {"error":"Hostname/IP does not match certificat…
+0|tracker- | 10:42:54 PM [ws] WebSocket client connected
+0|tracker- | 10:42:55 PM [ws] WebSocket client disconnected
+0|tracker- | 10:42:55 PM [express] GET /api/vehicles 500 in 13ms :: {"error":"Hostname/IP does not match certifica…
+0|tracker- | 10:42:55 PM [ws] WebSocket client connected
+0|tracker- | 10:42:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:42:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:42:57 PM [cache] Vehicle metadata cache initialized with 20 vehicles
+0|tracker- | 10:42:57 PM [poller] Starting Motive API polling every 60 seconds
+0|tracker- | 10:42:57 PM [poller] Starting Motive API poll...
+0|tracker- | 10:42:57 PM [express] serving on port 5000
+0|tracker- | 10:42:57 PM [ws] WebSocket client connected
+0|tracker- | 10:42:57 PM [poller] Vehicle poll complete: 9 locations processed from 9 vehicles
+0|tracker- | 10:42:57 PM [poller] Asset poll complete: 10 locations processed from 10 assets
+0|tracker- | 10:42:57 PM [poller] Motive API poll complete
+0|tracker- | 10:42:57 PM [express] GET /api/custom-locations 304 in 5ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client disconnected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:00 PM [ws] WebSocket client connected
+0|tracker- | 10:43:08 PM [express] GET /api/vehicles 200 in 7169ms :: [{"id":"1335366","name":"T22","color":"#f73b…
+0|tracker- | 10:43:08 PM [express] GET /api/custom-locations 200 in 3ms :: [{"id":1,"name":"SF","latitude":43.5442…
+
+0|tracker-app  | 10:43:48 PM [ws] WebSocket client disconnected
+0|tracker-app  | 10:43:49 PM [ws] WebSocket client connected
