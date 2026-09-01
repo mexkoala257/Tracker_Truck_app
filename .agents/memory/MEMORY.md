@@ -1,0 +1,1 @@
+- [VPS database driver](vps-database-driver.md) — keep the standard PostgreSQL driver because production uses local PostgreSQL, not Neon WebSockets.
