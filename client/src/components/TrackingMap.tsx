@@ -231,7 +231,7 @@ export default function TrackingMap({
   data, 
   onVehicleUpdate, 
   readOnly = false,
-  darkMode = false,
+  darkMode = true,
   center = [44.25, -98.25],
   zoom = 9,
   minZoom = 8,
