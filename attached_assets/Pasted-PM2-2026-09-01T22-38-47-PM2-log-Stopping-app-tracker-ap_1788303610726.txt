@@ -1,0 +1,49 @@
+PM2        | 2026-09-01T22:38:47: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2026-09-01T22:38:47: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2026-09-01T22:38:47: PM2 log: pid=842 msg=process killed
+PM2        | 2026-09-01T22:38:47: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2026-09-01T22:38:47: PM2 log: App [tracker-app:0] online
+PM2        | 2026-09-01T22:42:56: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2026-09-01T22:42:56: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2026-09-01T22:42:56: PM2 log: pid=530806 msg=process killed
+PM2        | 2026-09-01T22:42:56: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2026-09-01T22:42:56: PM2 log: App [tracker-app:0] online
+PM2        | 2026-09-01T22:57:56: PM2 log: Stopping app:tracker-app id:0
+PM2        | 2026-09-01T22:57:56: PM2 log: App [tracker-app:0] exited with code [0] via signal [SIGINT]
+PM2        | 2026-09-01T22:57:56: PM2 log: pid=530941 msg=process killed
+PM2        | 2026-09-01T22:57:56: PM2 log: App [tracker-app:0] starting in -fork mode-
+PM2        | 2026-09-01T22:57:56: PM2 log: App [tracker-app:0] online
+
+/root/.pm2/logs/tracker-app-out.log last 15 lines:
+0|tracker- | 10:57:10 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:10 PM [ws] WebSocket client connected
+0|tracker- | 10:57:33 PM [express] GET /api/vehicles 304 in 38723ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39284ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39067ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 38922ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/vehicles 200 in 27954ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:57:48 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:48 PM [ws] WebSocket client connected
+0|tracker- | 10:57:54 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:54 PM [ws] WebSocket client connected
+0|tracker- | 10:57:55 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:56 PM [ws] WebSocket client connected
+0|tracker- | 10:57:56 PM [ws] WebSocket client disconnected
+
+/root/.pm2/logs/tracker-app-error.log last 15 lines:
+0|tracker- |     [Symbol(kCapture)]: false
+0|tracker- |   }
+0|tracker- | }
+0|tracker- | Error: ENOENT: no such file or directory, stat '/var/www/Tracker_Truck_app/dist/public/index.html'
+0|tracker- | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'express' imported from /var/www/Tracker_Truck_app/dist/index.js
+0|tracker- |     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0|tracker- |     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0|tracker- |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|tracker- |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|tracker- |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|tracker- |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|tracker- |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|tracker- |     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+0|tracker- |   code: 'ERR_MODULE_NOT_FOUND'
+0|tracker- | }
