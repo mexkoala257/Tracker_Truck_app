@@ -44,6 +44,7 @@ interface TrackingMapProps {
   data: VehicleData[];
   onVehicleUpdate?: () => void;
   readOnly?: boolean;
+  darkMode?: boolean;
   center?: [number, number];
   zoom?: number;
   minZoom?: number;
@@ -108,6 +109,25 @@ function ZoomSetter({ zoom }: { zoom: number }) {
     }
   }, [zoom, map]);
   
+  return null;
+}
+
+function MapTileTheme({ darkMode }: { darkMode: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const tilePane = map.getPane("tilePane");
+    if (!tilePane) return;
+
+    tilePane.style.filter = darkMode
+      ? "invert(0.92) hue-rotate(180deg) brightness(0.78) contrast(0.92) saturate(0.72)"
+      : "";
+
+    return () => {
+      tilePane.style.filter = "";
+    };
+  }, [darkMode, map]);
+
   return null;
 }
 
@@ -211,6 +231,7 @@ export default function TrackingMap({
   data, 
   onVehicleUpdate, 
   readOnly = false,
+  darkMode = false,
   center = [44.25, -98.25],
   zoom = 9,
   minZoom = 8,
@@ -316,6 +337,7 @@ export default function TrackingMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        <MapTileTheme darkMode={darkMode} />
         {autoFitBounds && <MapBoundsFitter vehicles={data} />}
         <ZoomHandler onZoomChange={onZoomChange} />
         <ZoomSetter zoom={zoom} />

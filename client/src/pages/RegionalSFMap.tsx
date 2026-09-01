@@ -11,6 +11,7 @@ const SIOUX_FALLS_BOUNDS = {
 const SIOUX_FALLS_CENTER: [number, number] = [43.54, -96.75];
 const STORAGE_KEY = "regional-sf-zoom";
 const VISIBLE_VEHICLES_KEY = "regional-sf-visible-vehicles";
+const DARK_MODE_KEY = "regional-sf-dark-mode";
 const DEFAULT_ZOOM = 12;
 const MIN_ZOOM = 11;
 const MAX_ZOOM = 17;
@@ -34,6 +35,14 @@ function getSavedVisibleVehicles(): Set<string> | null {
   return null;
 }
 
+function getSavedDarkMode(): boolean {
+  try {
+    return localStorage.getItem(DARK_MODE_KEY) === "true";
+  } catch (e) {
+    return false;
+  }
+}
+
 type VehicleEntry = {
   id: string;
   name?: string;
@@ -49,6 +58,7 @@ export default function RegionalSFMap() {
   const [zoom] = useState(getSavedZoom);
   const [vehicleData, setVehicleData] = useState<VehicleEntry[]>([]);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
+  const [darkMode, setDarkMode] = useState(getSavedDarkMode);
   const [initialized, setInitialized] = useState(false);
 
   const loadVehicles = async () => {
@@ -75,12 +85,17 @@ export default function RegionalSFMap() {
   // Re-read visible IDs from localStorage whenever the window regains focus
   // so display board picks up changes made on the settings page
   useEffect(() => {
-    const onFocus = () => {
+    const syncDisplaySettings = () => {
       const saved = getSavedVisibleVehicles();
       if (saved) setVisibleIds(saved);
+      setDarkMode(getSavedDarkMode());
     };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    window.addEventListener("focus", syncDisplaySettings);
+    window.addEventListener("storage", syncDisplaySettings);
+    return () => {
+      window.removeEventListener("focus", syncDisplaySettings);
+      window.removeEventListener("storage", syncDisplaySettings);
+    };
   }, []);
 
   const { isConnected } = useWebSocket((data) => {
@@ -129,6 +144,7 @@ export default function RegionalSFMap() {
         onZoomChange={() => {}}
         autoFitBounds={false}
         readOnly
+        darkMode={darkMode}
       />
 
       {/* Minimal status overlay — top left */}

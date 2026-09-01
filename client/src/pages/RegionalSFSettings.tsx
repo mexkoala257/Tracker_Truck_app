@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import {
-  Home, MapPin, Check, ArrowLeft, ExternalLink
+  Home, MapPin, Check, ArrowLeft, ExternalLink, Moon, Sun
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_HOME_OFFICE: [number, number] = [43.5446, -96.7311];
 const VISIBLE_VEHICLES_KEY = "regional-sf-visible-vehicles";
+const DARK_MODE_KEY = "regional-sf-dark-mode";
 
 function getSavedVisibleVehicles(): string[] | null {
   try {
@@ -21,6 +22,14 @@ function saveVisibleVehicles(ids: string[]) {
   try {
     localStorage.setItem(VISIBLE_VEHICLES_KEY, JSON.stringify(ids));
   } catch (e) {}
+}
+
+function getSavedDarkMode(): boolean {
+  try {
+    return localStorage.getItem(DARK_MODE_KEY) === "true";
+  } catch (e) {
+    return false;
+  }
 }
 
 function distanceMiles(
@@ -74,6 +83,7 @@ export default function RegionalSFSettings() {
   const [homeOffice, setHomeOffice] = useState<[number, number]>(DEFAULT_HOME_OFFICE);
   const [homeOfficeName, setHomeOfficeName] = useState<string>("Home Office");
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
+  const [darkMode, setDarkMode] = useState(getSavedDarkMode);
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
@@ -154,6 +164,16 @@ export default function RegionalSFSettings() {
     saveVisibleVehicles(Array.from(ids));
   };
 
+  const toggleDarkMode = () => {
+    setDarkMode((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem(DARK_MODE_KEY, String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
   const sortedVehicles = [...vehicleData].sort((a, b) => {
     const da = distanceMiles(homeOffice[0], homeOffice[1], a.location.lat, a.location.lon);
     const db = distanceMiles(homeOffice[0], homeOffice[1], b.location.lat, b.location.lon);
@@ -207,6 +227,40 @@ export default function RegionalSFSettings() {
           <p className="ml-auto text-[11px] text-muted-foreground text-right">
             Distances are calculated<br />from this location
           </p>
+        </div>
+
+        {/* Display appearance */}
+        <div className="rounded-lg border border-border bg-muted/30 p-4 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            {darkMode ? (
+              <Moon className="w-4 h-4 text-primary" />
+            ) : (
+              <Sun className="w-4 h-4 text-primary" />
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Map appearance</p>
+            <p className="text-[11px] text-muted-foreground">
+              {darkMode ? "Dark map is enabled on the display board" : "Light map is enabled on the display board"}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={darkMode}
+            aria-label="Toggle dark map mode"
+            onClick={toggleDarkMode}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              darkMode ? "bg-primary" : "bg-muted"
+            }`}
+            data-testid="switch-dark-map"
+          >
+            <span
+              className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                darkMode ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
 
         {/* Vehicle list */}
