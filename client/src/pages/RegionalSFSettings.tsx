@@ -143,7 +143,7 @@ export default function RegionalSFSettings() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      saveVisibleVehicles([...next]);
+      saveVisibleVehicles(Array.from(next));
       return next;
     });
   };
@@ -151,7 +151,7 @@ export default function RegionalSFSettings() {
   const toggleAll = (show: boolean) => {
     const ids = show ? new Set(vehicleData.map((v) => v.id)) : new Set<string>();
     setVisibleIds(ids);
-    saveVisibleVehicles([...ids]);
+    saveVisibleVehicles(Array.from(ids));
   };
 
   const sortedVehicles = [...vehicleData].sort((a, b) => {
