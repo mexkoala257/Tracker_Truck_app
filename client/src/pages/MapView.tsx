@@ -152,7 +152,7 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
   });
 
   const displayedVehicles = dispatchOnly
-    ? vehicleData.filter((vehicle) => !vehicle.id.startsWith("asset-") && vehicle.id !== "HOME")
+    ? vehicleData.filter((vehicle) => vehicle.id !== "HOME")
     : vehicleData;
 
   return (
@@ -211,7 +211,11 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
         <div className="absolute top-4 right-4 z-[1000] px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-sm border border-border shadow-lg">
           <span className="text-xs font-mono">
             <span className="text-primary font-bold">{displayedVehicles.length}</span>
-            <span className="text-muted-foreground"> vehicle{displayedVehicles.length !== 1 ? 's' : ''}</span>
+            <span className="text-muted-foreground">
+              {dispatchOnly
+                ? ` tracked${displayedVehicles.length !== 1 ? '' : ''}`
+                : ` vehicle${displayedVehicles.length !== 1 ? 's' : ''}`}
+            </span>
           </span>
         </div>
       )}

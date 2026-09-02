@@ -132,7 +132,7 @@ export default function ActiveVehiclesPanel({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            Active vehicles
+            Active fleet
           </p>
           <p className="mt-0.5 truncate text-sm font-semibold">
             {vehiclesAway.length} outside saved locations
