@@ -1,0 +1,116 @@
+root@srv1205734:/var/www/Tracker_Truck_app# cd /var/www/Tracker_Truck_app
+
+# Load DATABASE_URL from the project environment file
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
+# Install dev dependencies, including drizzle-kit
+npm ci --include=dev
+
+# Add the missing database column
+npm run db:push
+
+# Rebuild and restart the app
+npm run build
+pm2 restart tracker-app --update-env
+
+sleep 5
+
+# Confirm the app responds
+curl -sS http://127.0.0.1:5000/api/vehicles/metadata \
+  | node -e '
+let input = "";
+process.stdin.on("data", chunk => input += chunk);
+process.stdin.on("end", () => {
+  const data = JSON.parse(input);
+  if (!Array.isArray(data)) {
+    console.error(data);
+    process.exit(1);
+  }
+  data.forEach(vehicle => {
+    console.log(`${vehicle.vehicleId}\t${vehicle.name}`);
+  });
+});
+'
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+
+added 448 packages, and audited 449 packages in 12s
+
+42 packages are looking for funding
+  run `npm fund` for details
+
+20 vulnerabilities (3 low, 6 moderate, 11 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/var/www/Tracker_Truck_app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+error: column "id" is in a primary key
+    at /var/www/Tracker_Truck_app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Object.query (/var/www/Tracker_Truck_app/node_modules/drizzle-kit/bin.cjs:80601:26)
+    at async pgPush (/var/www/Tracker_Truck_app/node_modules/drizzle-kit/bin.cjs:84411:13)
+    at async Object.handler (/var/www/Tracker_Truck_app/node_modules/drizzle-kit/bin.cjs:93813:9)
+    at async run (/var/www/Tracker_Truck_app/node_modules/drizzle-kit/bin.cjs:93059:7) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P16',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'tablecmds.c',
+  line: '14146',
+  routine: 'dropconstraint_internal'
+}
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js
+
+vite v7.1.12 building for production...
+✓ 1908 modules transformed.
+rendering chunks (1)...[meta-images] no Replit deployment domain found, skipping meta tag updates
+../dist/public/index.html                   1.67 kB │ gzip:   0.71 kB
+../dist/public/assets/index-BFE6Gb-B.css  120.15 kB │ gzip:  23.69 kB
+../dist/public/assets/index-Cd_qsf77.js   852.67 kB │ gzip: 255.04 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 17.93s
+
+  dist/index.js  43.4kb
+
+⚡ Done in 18ms
+[PM2] Applying action restartProcessId on app [tracker-app](ids: [ 0 ])
+[PM2] [tracker-app](0) ✓
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ tracker-app    │ default     │ 1.0.0   │ fork    │ 534395   │ 0s     │ 12   │ online    │ 0%       │ 19.1mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+{ error: 'column "home_location_id" does not exist' }
+root@srv1205734:/var/www/Tracker_Truck_app# 
