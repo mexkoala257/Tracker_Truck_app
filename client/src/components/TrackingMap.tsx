@@ -40,6 +40,13 @@ interface CustomLocation {
   description: string | null;
 }
 
+export interface TrackingMapBaseLocation {
+  lat: number;
+  lon: number;
+  name: string;
+  address: string;
+}
+
 interface TrackingMapProps {
   data: VehicleData[];
   onVehicleUpdate?: () => void;
@@ -52,6 +59,7 @@ interface TrackingMapProps {
   bounds?: MapBounds;
   onZoomChange?: (zoom: number) => void;
   autoFitBounds?: boolean;
+  baseLocation?: TrackingMapBaseLocation | null;
 }
 
 // Calculate responsive minZoom based on screen size
@@ -140,7 +148,7 @@ const HOME_BASE = {
 };
 
 // Home Base Icon
-const createHomeBaseIcon = () => {
+const createHomeBaseIcon = (label: string = HOME_BASE.name) => {
   const iconHtml = renderToString(
     <div className="relative flex items-center justify-center w-12 h-12">
       <div className="relative w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center shadow-lg border-2 border-amber-300"
@@ -148,7 +156,7 @@ const createHomeBaseIcon = () => {
         <Home className="w-5 h-5 text-white" />
       </div>
       <div className="absolute -bottom-2 bg-background/90 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border border-border shadow-sm whitespace-nowrap">
-        Home Base
+         {label}
       </div>
     </div>
   );
@@ -238,7 +246,8 @@ export default function TrackingMap({
   maxZoom = 15,
   bounds = DEFAULT_BOUNDS,
   onZoomChange,
-  autoFitBounds = true
+  autoFitBounds = true,
+  baseLocation = HOME_BASE,
 }: TrackingMapProps) {
   const [vehicleTrails, setVehicleTrails] = useState<Record<string, Location[]>>({});
   const [loadingTrails, setLoadingTrails] = useState<Set<string>>(new Set());
@@ -390,23 +399,25 @@ export default function TrackingMap({
           </div>
         ))}
 
-        <Marker 
-          position={[HOME_BASE.lat, HOME_BASE.lon]} 
-          icon={createHomeBaseIcon()}
-          zIndexOffset={1000}
-        >
-          <Popup className="custom-popup">
-            <div className="p-2 min-w-[180px]">
-              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
-                <Home className="w-4 h-4 text-amber-500" />
-                <span className="font-bold text-sm">{HOME_BASE.name}</span>
+        {baseLocation && (
+          <Marker
+            position={[baseLocation.lat, baseLocation.lon]}
+            icon={createHomeBaseIcon(baseLocation.name)}
+            zIndexOffset={1000}
+          >
+            <Popup className="custom-popup">
+              <div className="p-2 min-w-[180px]">
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
+                  <Home className="w-4 h-4 text-amber-500" />
+                  <span className="font-bold text-sm">{baseLocation.name}</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {baseLocation.address}
+                </div>
               </div>
-              <div className="text-xs text-muted-foreground">
-                {HOME_BASE.address}
-              </div>
-            </div>
-          </Popup>
-        </Marker>
+            </Popup>
+          </Marker>
+        )}
 
         {customLocations.map((location) => {
           const IconComponent = getIconComponent(location.icon || "marker");

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
+import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaPanel";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { Clock3, MapPin, Radio, Warehouse } from "lucide-react";
+import { MapPin, Radio } from "lucide-react";
 
 const SIOUX_FALLS_BOUNDS = {
   southwest: [43.43, -96.96] as [number, number],
@@ -15,14 +16,11 @@ const DARK_MODE_KEY = "regional-sf-dark-mode";
 const DEFAULT_ZOOM = 12;
 const MIN_ZOOM = 11;
 const MAX_ZOOM = 17;
-const CENTRAL_TIME_ZONE = "America/Chicago";
-const RETURN_ETA_CUTOFF_HOUR = 15;
 const DEFAULT_WAREHOUSE = {
   name: "Main Warehouse",
   latitude: 43.55,
   longitude: -96.73,
 };
-const STALE_LOCATION_MS = 10 * 60 * 1000;
 
 function getSavedZoom(): number {
   try {
@@ -63,135 +61,12 @@ type VehicleEntry = {
   heading: number;
 };
 
-type WarehouseLocation = {
-  name: string;
-  latitude: number;
-  longitude: number;
-};
-
-type ReturnEstimate = {
-  vehicle: VehicleEntry;
-  eta: Date | null;
-  roadMiles: number;
-  minutes: number;
-  isAtWarehouse: boolean;
-  isStale: boolean;
-  ageMinutes: number;
-};
-
-function distanceMiles(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const radiusMiles = 3958.8;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-
-  return radiusMiles * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function getCentralTimeParts(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: CENTRAL_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  return {
-    hour: Number(parts.find((part) => part.type === "hour")?.value || 0),
-    minute: Number(parts.find((part) => part.type === "minute")?.value || 0),
-  };
-}
-
-function isAfterReturnCutoff(date: Date): boolean {
-  return getCentralTimeParts(date).hour >= RETURN_ETA_CUTOFF_HOUR;
-}
-
-function formatCentralTime(date: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: CENTRAL_TIME_ZONE,
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function formatAge(ageMinutes: number): string {
-  if (ageMinutes < 1) return "just now";
-  if (ageMinutes < 60) return `${Math.round(ageMinutes)} min ago`;
-
-  const hours = Math.floor(ageMinutes / 60);
-  const minutes = Math.round(ageMinutes % 60);
-  return `${hours}h ${minutes}m ago`;
-}
-
-function estimateReturn(
-  vehicle: VehicleEntry,
-  warehouse: WarehouseLocation,
-  now: Date,
-): ReturnEstimate {
-  const straightLineMiles = distanceMiles(
-    warehouse.latitude,
-    warehouse.longitude,
-    vehicle.location.lat,
-    vehicle.location.lon,
-  );
-
-  // A 25% road-network adjustment keeps this useful without suggesting
-  // that the estimate is a straight-line "birds-eye" distance.
-  const roadMiles = straightLineMiles * 1.25;
-  const timestamp = new Date(vehicle.timestamp).getTime();
-  const ageMinutes = Number.isFinite(timestamp)
-    ? Math.max(0, (now.getTime() - timestamp) / 60000)
-    : Infinity;
-  const isStale = ageMinutes > STALE_LOCATION_MS / 60000;
-  const isAtWarehouse = roadMiles < 0.75;
-
-  if (isAtWarehouse || isStale) {
-    return {
-      vehicle,
-      eta: null,
-      roadMiles,
-      minutes: 0,
-      isAtWarehouse,
-      isStale,
-      ageMinutes,
-    };
-  }
-
-  // Use practical average road speeds instead of the instantaneous GPS
-  // speed, which can be zero while a driver is stopped in traffic.
-  const averageSpeedMph =
-    roadMiles <= 5 ? 30 :
-    roadMiles <= 15 ? 40 :
-    50;
-  const minutes = Math.max(5, Math.round((roadMiles / averageSpeedMph) * 60));
-
-  return {
-    vehicle,
-    eta: new Date(now.getTime() + minutes * 60000),
-    roadMiles,
-    minutes,
-    isAtWarehouse,
-    isStale,
-    ageMinutes,
-  };
-}
-
 export default function RegionalSFMap() {
   const [zoom] = useState(getSavedZoom);
   const [vehicleData, setVehicleData] = useState<VehicleEntry[]>([]);
   const [visibleIds, setVisibleIds] = useState<Set<string>>(new Set());
   const [darkMode, setDarkMode] = useState(getSavedDarkMode);
-  const [now, setNow] = useState(() => new Date());
-  const [warehouse, setWarehouse] = useState<WarehouseLocation>(DEFAULT_WAREHOUSE);
+  const [warehouse, setWarehouse] = useState<ReturnEtaWarehouse>(DEFAULT_WAREHOUSE);
   const [initialized, setInitialized] = useState(false);
 
   const loadVehicles = async () => {
@@ -243,11 +118,6 @@ export default function RegionalSFMap() {
     loadWarehouse();
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
   // Re-read visible IDs from localStorage whenever the window regains focus
   // so display board picks up changes made on the settings page
   useEffect(() => {
@@ -296,26 +166,6 @@ export default function RegionalSFMap() {
   });
 
   const filteredData = vehicleData.filter((v) => visibleIds.has(v.id));
-  const showReturnEta = isAfterReturnCutoff(now);
-  const allReturnEstimates = filteredData
-    .filter((vehicle) => !vehicle.id.startsWith("asset-"))
-    .map((vehicle) => estimateReturn(vehicle, warehouse, now))
-    .sort((a, b) => {
-      if (a.isAtWarehouse !== b.isAtWarehouse) return a.isAtWarehouse ? -1 : 1;
-      if (a.isStale !== b.isStale) return a.isStale ? 1 : -1;
-      return (a.eta?.getTime() || Number.MAX_SAFE_INTEGER) -
-        (b.eta?.getTime() || Number.MAX_SAFE_INTEGER);
-    });
-  const activeReturnEstimates = allReturnEstimates.filter(
-    (estimate) => !estimate.isAtWarehouse && !estimate.isStale && estimate.eta,
-  );
-  const atWarehouseCount = allReturnEstimates.filter(
-    (estimate) => estimate.isAtWarehouse,
-  ).length;
-  const staleCount = allReturnEstimates.filter(
-    (estimate) => !estimate.isAtWarehouse && estimate.isStale,
-  ).length;
-  const centralTime = formatCentralTime(now);
 
   return (
     <div className="h-screen w-screen relative bg-background overflow-hidden">
@@ -331,6 +181,7 @@ export default function RegionalSFMap() {
         autoFitBounds={false}
         readOnly
         darkMode={darkMode}
+        baseLocation={null}
       />
 
       {/* Minimal status overlay — top left */}
@@ -371,73 +222,7 @@ export default function RegionalSFMap() {
         )}
       </div>
 
-      {showReturnEta && (
-        <section className="absolute top-20 left-4 z-[1000] w-[min(21rem,calc(100vw-2rem))] max-h-[62vh] overflow-hidden rounded-xl border border-primary/25 bg-background/90 shadow-2xl backdrop-blur-md">
-          <div className="flex items-start gap-3 border-b border-border/70 px-4 py-3">
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15">
-              <Clock3 className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                Return ETA
-              </p>
-              <p className="mt-0.5 truncate text-sm font-semibold">
-                Back to {warehouse.name}
-              </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Approximate road return times · {centralTime} Central
-              </p>
-            </div>
-            <Warehouse className="mt-1 h-4 w-4 shrink-0 text-emerald-400" />
-          </div>
-
-          <div className="max-h-[42vh] overflow-y-auto p-3">
-            {activeReturnEstimates.length === 0 ? (
-              <div className="px-3 py-4 text-center">
-                <p className="text-sm font-medium">No active return estimates</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Arrival times appear when a truck has a current GPS position away from the warehouse.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {activeReturnEstimates.map((estimate) => (
-                  <div
-                    key={estimate.vehicle.id}
-                    className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: estimate.vehicle.color || "#3b82f6" }}
-                        />
-                        <span className="truncate text-sm font-semibold">
-                          {estimate.vehicle.name || estimate.vehicle.id}
-                        </span>
-                      </div>
-                      <span className="shrink-0 text-base font-bold text-primary">
-                        {estimate.eta ? formatCentralTime(estimate.eta) : "Unavailable"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 border-t border-border/70 px-4 py-2.5 text-[10px] text-muted-foreground">
-            <span>
-              <span className="font-semibold text-emerald-400">{atWarehouseCount}</span>
-              {" at warehouse"}
-            </span>
-            <span>
-              <span className="font-semibold text-amber-400">{staleCount}</span>
-              {" awaiting current GPS"}
-            </span>
-          </div>
-        </section>
-      )}
+      <ReturnEtaPanel vehicles={filteredData} warehouse={warehouse} />
     </div>
   );
 }

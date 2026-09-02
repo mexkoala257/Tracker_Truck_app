@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
+import ReturnEtaPanel from "@/components/ReturnEtaPanel";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, ZoomIn, ZoomOut, Lock } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -9,6 +10,11 @@ const STORAGE_KEY = "mapview-zoom";
 const DEFAULT_ZOOM = 9;
 const MIN_ZOOM = 6;
 const MAX_ZOOM = 17;
+const ARLINGTON_WAREHOUSE = {
+  name: "Arlington Warehouse",
+  latitude: 44.3792,
+  longitude: -97.1406,
+};
 
 function getSavedZoom(): number {
   try {
@@ -107,6 +113,12 @@ export default function MapView() {
           maxZoom={MAX_ZOOM}
           onZoomChange={handleZoomChange}
           autoFitBounds={false}
+          baseLocation={{
+            name: ARLINGTON_WAREHOUSE.name,
+            lat: ARLINGTON_WAREHOUSE.latitude,
+            lon: ARLINGTON_WAREHOUSE.longitude,
+            address: "107 Opportunity Dr, Arlington, SD",
+          }}
         />
       ) : (
         <div className="h-full w-full flex flex-col items-center justify-center bg-background text-muted-foreground">
@@ -141,6 +153,8 @@ export default function MapView() {
           </span>
         </div>
       )}
+
+      <ReturnEtaPanel vehicles={vehicleData} warehouse={ARLINGTON_WAREHOUSE} />
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-background/50 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 flex items-center gap-3">
         <Button
