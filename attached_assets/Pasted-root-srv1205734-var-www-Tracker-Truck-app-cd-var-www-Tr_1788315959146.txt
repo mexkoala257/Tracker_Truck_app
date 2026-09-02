@@ -1,0 +1,99 @@
+root@srv1205734:/var/www/Tracker_Truck_app# cd /var/www/Tracker_Truck_app
+
+npm ci
+npm run build
+
+pm2 restart tracker-app --update-env
+
+sleep 5
+
+ss -ltnp | grep ':5000' || true
+curl -sS -o /dev/null -w "root: %{http_code}\n" --max-time 10 http://127.0.0.1:5000/
+pm2 logs tracker-app --lines 30 --nostream
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+npm error code EAI_AGAIN
+npm error syscall getaddrinfo
+npm error errno EAI_AGAIN
+npm error request to http://package-firewall.replit.local/npm/pg-protocol/-/pg-protocol-1.16.0.tgz failed, reason: getaddrinfo EAI_AGAIN package-firewall.replit.local
+npm error A complete log of this run can be found in: /root/.npm/_logs/2026-09-02T02_23_53_829Z-debug-0.log
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index-prod.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js
+
+sh: 1: vite: not found
+[PM2] Applying action restartProcessId on app [tracker-app](ids: [ 0 ])
+[PM2] [tracker-app](0) ✓
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ tracker-app    │ default     │ 1.0.0   │ fork    │ 531779   │ 0s     │ 4    │ online    │ 0%       │ 17.1mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+curl: (7) Failed to connect to 127.0.0.1 port 5000 after 0 ms: Could not connect to server
+root: 000
+[TAILING] Tailing last 30 lines for [tracker-app] process (change the value with --lines option)
+/root/.pm2/logs/tracker-app-out.log last 30 lines:
+0|tracker- | 10:56:56 PM [ws] WebSocket client connected
+0|tracker- | 10:56:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:56 PM [ws] WebSocket client connected
+0|tracker- | 10:56:57 PM [ws] WebSocket client connected
+0|tracker- | 10:56:57 PM [poller] Starting Motive API poll...
+0|tracker- | 10:56:57 PM [poller] Vehicle poll complete: 9 locations processed from 9 vehicles
+0|tracker- | 10:56:57 PM [express] GET /api/custom-locations 304 in 6ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 11ms :: [{"id":1,"name":"SF","latitude":43.544…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 6ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 15ms :: [{"id":1,"name":"SF","latitude":43.544…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 143ms :: [{"id":1,"name":"SF","latitude":43.54…
+0|tracker- | 10:56:58 PM [poller] Asset poll complete: 10 locations processed from 10 assets
+0|tracker- | 10:56:58 PM [poller] Motive API poll complete
+0|tracker- | 10:57:00 PM [express] GET /api/vehicles 304 in 11903ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:10 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:10 PM [ws] WebSocket client connected
+0|tracker- | 10:57:33 PM [express] GET /api/vehicles 304 in 38723ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39284ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39067ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 38922ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/vehicles 200 in 27954ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:57:48 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:48 PM [ws] WebSocket client connected
+0|tracker- | 10:57:54 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:54 PM [ws] WebSocket client connected
+0|tracker- | 10:57:55 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:56 PM [ws] WebSocket client connected
+0|tracker- | 10:57:56 PM [ws] WebSocket client disconnected
+
+/root/.pm2/logs/tracker-app-error.log last 30 lines:
+0|tracker- |     readyForQuery: true,
+0|tracker- |     hasExecuted: true,
+0|tracker- |     _poolUseCount: 38,
+0|tracker- |     [Symbol(shapeMode)]: false,
+0|tracker- |     [Symbol(kCapture)]: false
+0|tracker- |   }
+0|tracker- | }
+0|tracker- | Error: ENOENT: no such file or directory, stat '/var/www/Tracker_Truck_app/dist/public/index.html'
+0|tracker- | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'express' imported from /var/www/Tracker_Truck_app/dist/index.js
+0|tracker- |     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0|tracker- |     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0|tracker- |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|tracker- |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|tracker- |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|tracker- |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|tracker- |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|tracker- |     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+0|tracker- |   code: 'ERR_MODULE_NOT_FOUND'
+0|tracker- | }
+0|tracker- | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'express' imported from /var/www/Tracker_Truck_app/dist/index.js
+0|tracker- |     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0|tracker- |     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0|tracker- |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|tracker- |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|tracker- |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|tracker- |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|tracker- |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|tracker- |     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+0|tracker- |   code: 'ERR_MODULE_NOT_FOUND'
+0|tracker- | }
+
+root@srv1205734:/var/www/Tracker_Truck_app# 
