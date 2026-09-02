@@ -1,0 +1,197 @@
+root@srv1205734:~# cd /var/www/Tracker_Truck_app
+
+echo "== PM2 =="
+pm2 status tracker-app
+
+echo "== Listening ports =="
+ss -ltnp | grep -E ':5000|:80|:443' || true
+
+echo "== Local app checks =="
+curl -sS -o /dev/null -w "root: %{http_code}\n" --max-time 10 http://127.0.0.1:5000/
+curl -sS -o /dev/null -w "vehicles: %{http_code}\n" --max-time 15 http://127.0.0.1:5000/api/vehicles
+
+echo "== Nginx config =="
+sudo nginx -t
+sudo grep -R "proxy_pass" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null
+
+echo "== Recent Nginx errors =="
+sudo tail -n 50 /var/log/nginx/error.log
+
+echo "== Recent app errors =="
+pm2 logs tracker-app --lines 50 --nostream
+== PM2 ==
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ tracker-app    │ default     │ 1.0.0   │ fork    │ 531093   │ 3h     │ 3    │ online    │ 0%       │ 52.6mb   │ root     │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+== Listening ports ==
+LISTEN 0      511          0.0.0.0:80        0.0.0.0:*    users:(("nginx",pid=402719,fd=5),("nginx",pid=776,fd=5))
+LISTEN 0      511          0.0.0.0:443       0.0.0.0:*    users:(("nginx",pid=402719,fd=6),("nginx",pid=776,fd=6))
+== Local app checks ==
+curl: (7) Failed to connect to 127.0.0.1 port 5000 after 0 ms: Could not connect to server
+root: 000
+curl: (7) Failed to connect to 127.0.0.1 port 5000 after 0 ms: Could not connect to server
+vehicles: 000
+== Nginx config ==
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+/etc/nginx/sites-enabled/tracker-app:        proxy_pass http://127.0.0.1:5000;
+/etc/nginx/sites-enabled/tracker-app:        proxy_pass http://127.0.0.1:5000;
+/etc/nginx/sites-enabled/tracker-app:        proxy_pass http://127.0.0.1:5000;
+== Recent Nginx errors ==
+2026/09/02 02:20:54 [error] 402719#402719: *3064584 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:20:54 [error] 402719#402719: *3067775 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:20:56 [error] 402719#402719: *3067779 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:20:59 [error] 402719#402719: *3064313 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:20:59 [error] 402719#402719: *3064313 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /sioux-falls HTTP/1.1", upstream: "http://127.0.0.1:5000/sioux-falls", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/6931de5c-14a1be-9770-480e83b8fddc"
+2026/09/02 02:21:00 [error] 402719#402719: *3068917 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:01 [error] 402719#402719: *3068919 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:06 [error] 402719#402719: *3068921 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:08 [error] 402719#402719: *3068923 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:13 [error] 402719#402719: *3068925 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:15 [error] 402719#402719: *3068927 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:18 [error] 402719#402719: *3068929 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:22 [error] 402719#402719: *3068931 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:27 [error] 402719#402719: *3068933 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:28 [error] 402719#402719: *3068935 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:31 [error] 402719#402719: *3068937 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:33 [error] 402719#402719: *3068939 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:35 [error] 402719#402719: *3068941 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:39 [error] 402719#402719: *3068943 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:39 [error] 402719#402719: *3068945 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:43 [error] 402719#402719: *3068947 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:43 [error] 402719#402719: *3068949 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:44 [error] 402719#402719: *3068660 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:21:47 [error] 402719#402719: *3068952 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:47 [error] 402719#402719: *3068954 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:51 [error] 402719#402719: *3068956 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:51 [error] 402719#402719: *3068958 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:54 [error] 402719#402719: *3064584 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:21:54 [error] 402719#402719: *3067775 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:21:55 [error] 402719#402719: *3068962 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:55 [error] 402719#402719: *3068964 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:56 [error] 402719#402719: *3067779 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:21:59 [error] 402719#402719: *3064313 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /map HTTP/1.1", upstream: "http://127.0.0.1:5000/map", host: "srv1205734.hstgr.cloud", referrer: "https://dakboard.com/screen/uuid/693b3986-14a1be-4b89-eb68fd6c026c"
+2026/09/02 02:21:59 [error] 402719#402719: *3068968 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:21:59 [error] 402719#402719: *3068970 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:02 [error] 402719#402719: *3068972 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:03 [error] 402719#402719: *3068974 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:06 [error] 402719#402719: *3068976 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:07 [error] 402719#402719: *3068978 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:09 [error] 402719#402719: *3068980 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:11 [error] 402719#402719: *3068982 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:12 [error] 402719#402719: *3068984 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:15 [error] 402719#402719: *3068986 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:15 [error] 402719#402719: *3068988 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:19 [error] 402719#402719: *3068990 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:19 [error] 402719#402719: *3068992 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:22 [error] 402719#402719: *3068994 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:23 [error] 402719#402719: *3068996 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:25 [error] 402719#402719: *3068998 connect() failed (111: Connection refused) while connecting to upstream, client: 199.96.71.133, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+2026/09/02 02:22:27 [error] 402719#402719: *3069000 connect() failed (111: Connection refused) while connecting to upstream, client: 69.9.246.214, server: srv1205734.hstgr.cloud, request: "GET /ws HTTP/1.1", upstream: "http://127.0.0.1:5000/ws", host: "srv1205734.hstgr.cloud"
+== Recent app errors ==
+[TAILING] Tailing last 50 lines for [tracker-app] process (change the value with --lines option)
+/root/.pm2/logs/tracker-app-out.log last 50 lines:
+0|tracker- | 10:55:55 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 10:55:55 PM [ws] WebSocket client connected
+0|tracker- | 10:55:55 PM [express] GET /api/custom-locations 304 in 2ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:55:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:55:56 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 10:55:56 PM [ws] WebSocket client connected
+0|tracker- | 10:55:56 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:55:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:55:57 PM [express] GET /api/vehicles 304 in 1ms :: [{"id":"1335366","name":"T22","color":"#f73bbb"…
+0|tracker- | 10:55:57 PM [ws] WebSocket client connected
+0|tracker- | 10:55:57 PM [poller] Starting Motive API poll...
+0|tracker- | 10:55:57 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:55:57 PM [poller] Vehicle poll complete: 9 locations processed from 9 vehicles
+0|tracker- | 10:55:57 PM [poller] Asset poll complete: 10 locations processed from 10 assets
+0|tracker- | 10:55:57 PM [poller] Motive API poll complete
+0|tracker- | 10:56:48 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:48 PM [ws] WebSocket client connected
+0|tracker- | 10:56:54 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:54 PM [ws] WebSocket client connected
+0|tracker- | 10:56:55 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:56 PM [ws] WebSocket client connected
+0|tracker- | 10:56:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:56 PM [ws] WebSocket client disconnected
+0|tracker- | 10:56:56 PM [ws] WebSocket client connected
+0|tracker- | 10:56:57 PM [ws] WebSocket client connected
+0|tracker- | 10:56:57 PM [poller] Starting Motive API poll...
+0|tracker- | 10:56:57 PM [poller] Vehicle poll complete: 9 locations processed from 9 vehicles
+0|tracker- | 10:56:57 PM [express] GET /api/custom-locations 304 in 6ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 11ms :: [{"id":1,"name":"SF","latitude":43.544…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 6ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 15ms :: [{"id":1,"name":"SF","latitude":43.544…
+0|tracker- | 10:56:58 PM [express] GET /api/custom-locations 304 in 143ms :: [{"id":1,"name":"SF","latitude":43.54…
+0|tracker- | 10:56:58 PM [poller] Asset poll complete: 10 locations processed from 10 assets
+0|tracker- | 10:56:58 PM [poller] Motive API poll complete
+0|tracker- | 10:57:00 PM [express] GET /api/vehicles 304 in 11903ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:10 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:10 PM [ws] WebSocket client connected
+0|tracker- | 10:57:33 PM [express] GET /api/vehicles 304 in 38723ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39284ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 39067ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:35 PM [express] GET /api/vehicles 304 in 38922ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/vehicles 200 in 27954ms :: [{"id":"1335366","name":"T22","color":"#f73…
+0|tracker- | 10:57:38 PM [express] GET /api/custom-locations 304 in 1ms :: [{"id":1,"name":"SF","latitude":43.5442…
+0|tracker- | 10:57:48 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:48 PM [ws] WebSocket client connected
+0|tracker- | 10:57:54 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:54 PM [ws] WebSocket client connected
+0|tracker- | 10:57:55 PM [ws] WebSocket client disconnected
+0|tracker- | 10:57:56 PM [ws] WebSocket client connected
+0|tracker- | 10:57:56 PM [ws] WebSocket client disconnected
+
+/root/.pm2/logs/tracker-app-error.log last 50 lines:
+0|tracker- |     _connecting: false,
+0|tracker- |     _connected: true,
+0|tracker- |     _connectionError: false,
+0|tracker- |     _queryable: false,
+0|tracker- |     enableChannelBinding: false,
+0|tracker- |     connection: Connection {
+0|tracker- |       _events: [Object: null prototype],
+0|tracker- |       _eventsCount: 23,
+0|tracker- |       _maxListeners: undefined,
+0|tracker- |       stream: [Socket],
+0|tracker- |       _keepAlive: false,
+0|tracker- |       _keepAliveInitialDelayMillis: 0,
+0|tracker- |       lastBuffer: false,
+0|tracker- |       parsedStatements: {},
+0|tracker- |       ssl: false,
+0|tracker- |       _ending: true,
+0|tracker- |       _emitMessage: false,
+0|tracker- |       _connecting: true,
+0|tracker- |       [Symbol(shapeMode)]: false,
+0|tracker- |       [Symbol(kCapture)]: false
+0|tracker- |     },
+0|tracker- |     queryQueue: [],
+0|tracker- |     binary: false,
+0|tracker- |     processID: 1956242,
+0|tracker- |     secretKey: 433160418,
+0|tracker- |     ssl: false,
+0|tracker- |     _connectionTimeoutMillis: 0,
+0|tracker- |     _connectionCallback: null,
+0|tracker- |     saslSession: null,
+0|tracker- |     release: [Function (anonymous)],
+0|tracker- |     activeQuery: null,
+0|tracker- |     readyForQuery: true,
+0|tracker- |     hasExecuted: true,
+0|tracker- |     _poolUseCount: 38,
+0|tracker- |     [Symbol(shapeMode)]: false,
+0|tracker- |     [Symbol(kCapture)]: false
+0|tracker- |   }
+0|tracker- | }
+0|tracker- | Error: ENOENT: no such file or directory, stat '/var/www/Tracker_Truck_app/dist/public/index.html'
+0|tracker- | Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'express' imported from /var/www/Tracker_Truck_app/dist/index.js
+0|tracker- |     at packageResolve (node:internal/modules/esm/resolve:873:9)
+0|tracker- |     at moduleResolve (node:internal/modules/esm/resolve:946:18)
+0|tracker- |     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+0|tracker- |     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+0|tracker- |     at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+0|tracker- |     at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+0|tracker- |     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+0|tracker- |     at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+0|tracker- |   code: 'ERR_MODULE_NOT_FOUND'
+0|tracker- | }
