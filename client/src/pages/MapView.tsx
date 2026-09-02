@@ -15,6 +15,10 @@ const DEFAULT_ARLINGTON_WAREHOUSE: ReturnEtaWarehouse = {
   latitude: 44.3792,
   longitude: -97.1406,
 };
+const DISPATCH_BOUNDS = {
+  southwest: [41.5, -103.5] as [number, number],
+  northeast: [47, -93] as [number, number],
+};
 
 function getSavedZoom(): number {
   try {
@@ -138,6 +142,7 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
           zoom={zoom}
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
+           bounds={dispatchOnly ? DISPATCH_BOUNDS : undefined}
           onZoomChange={handleZoomChange}
           autoFitBounds={false}
           baseLocation={{
