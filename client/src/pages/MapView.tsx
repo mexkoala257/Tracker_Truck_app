@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaPanel";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { Radio, Satellite, ZoomIn, ZoomOut, Lock } from "lucide-react";
+import { Radio, Satellite, Truck, ZoomIn, ZoomOut, Lock } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +35,11 @@ function saveZoom(zoom: number) {
   } catch (e) {}
 }
 
-export default function MapView() {
+type MapViewProps = {
+  dispatchOnly?: boolean;
+};
+
+export default function MapView({ dispatchOnly = false }: MapViewProps) {
   const [zoom, setZoom] = useState(getSavedZoom);
   const [warehouse, setWarehouse] = useState<ReturnEtaWarehouse>(DEFAULT_ARLINGTON_WAREHOUSE);
   const [vehicleData, setVehicleData] = useState<{
@@ -121,11 +125,15 @@ export default function MapView() {
     });
   });
 
+  const displayedVehicles = dispatchOnly
+    ? vehicleData.filter((vehicle) => !vehicle.id.startsWith("asset-") && vehicle.id !== "HOME")
+    : vehicleData;
+
   return (
     <div className="h-screen w-screen relative bg-background">
-      {vehicleData.length > 0 ? (
+      {displayedVehicles.length > 0 ? (
         <TrackingMap 
-          data={vehicleData} 
+          data={displayedVehicles}
           onVehicleUpdate={loadVehicles}
           zoom={zoom}
           minZoom={MIN_ZOOM}
@@ -150,6 +158,14 @@ export default function MapView() {
       )}
 
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-3">
+        {dispatchOnly && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-background/90 backdrop-blur-sm shadow-lg border-primary/30">
+            <Truck className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-mono font-bold uppercase text-primary">
+              Dispatch
+            </span>
+          </div>
+        )}
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border bg-background/90 backdrop-blur-sm shadow-lg ${
           isConnected 
             ? 'border-green-500/30' 
@@ -164,16 +180,16 @@ export default function MapView() {
         </div>
       </div>
 
-      {vehicleData.length > 0 && (
+      {displayedVehicles.length > 0 && (
         <div className="absolute top-4 right-4 z-[1000] px-3 py-1.5 rounded-full bg-background/90 backdrop-blur-sm border border-border shadow-lg">
           <span className="text-xs font-mono">
-            <span className="text-primary font-bold">{vehicleData.length}</span>
-            <span className="text-muted-foreground"> vehicle{vehicleData.length !== 1 ? 's' : ''}</span>
+            <span className="text-primary font-bold">{displayedVehicles.length}</span>
+            <span className="text-muted-foreground"> vehicle{displayedVehicles.length !== 1 ? 's' : ''}</span>
           </span>
         </div>
       )}
 
-      <ReturnEtaPanel vehicles={vehicleData} warehouse={warehouse} />
+      <ReturnEtaPanel vehicles={displayedVehicles} warehouse={warehouse} />
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-background/50 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 flex items-center gap-3">
         <Button
@@ -219,4 +235,8 @@ export default function MapView() {
       </div>
     </div>
   );
+}
+
+export function DispatchMap() {
+  return <MapView dispatchOnly />;
 }

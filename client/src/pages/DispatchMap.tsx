@@ -1,0 +1,1 @@
+export { DispatchMap as default } from "./MapView";

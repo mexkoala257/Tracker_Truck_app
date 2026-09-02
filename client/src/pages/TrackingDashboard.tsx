@@ -162,6 +162,12 @@ export default function TrackingDashboard() {
                 <span className="hidden sm:inline">Map View</span>
               </Button>
             </Link>
+            <Link href="/dispatch">
+              <Button variant="outline" size="sm" className="gap-2" data-testid="link-dispatch-view">
+                <Truck className="w-4 h-4" />
+                <span className="hidden sm:inline">Dispatch</span>
+              </Button>
+            </Link>
             <ExportDialog />
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border ${
               isConnected 

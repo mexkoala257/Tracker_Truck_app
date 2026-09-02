@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import TrackingDashboard from "@/pages/TrackingDashboard";
 import MapView from "@/pages/MapView";
+import DispatchMap from "@/pages/DispatchMap";
 import MapEmbed from "@/pages/MapEmbed";
 import SiouxFallsMap from "@/pages/SiouxFallsMap";
 import AutoFitMap from "@/pages/AutoFitMap";
@@ -14,12 +15,17 @@ import WebhookLog from "@/pages/WebhookLog";
 import RegionalSFMap from "@/pages/RegionalSFMap";
 import RegionalSFSettings from "@/pages/RegionalSFSettings";
 
+function MapRoute() {
+  return <MapView />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={TrackingDashboard} />
       <Route path="/admin" component={Admin} />
-      <Route path="/map" component={MapView} />
+      <Route path="/map" component={MapRoute} />
+      <Route path="/dispatch" component={DispatchMap} />
       <Route path="/auto-fit" component={AutoFitMap} />
       <Route path="/sioux-falls" component={SiouxFallsMap} />
       <Route path="/regional-sf" component={RegionalSFMap} />
