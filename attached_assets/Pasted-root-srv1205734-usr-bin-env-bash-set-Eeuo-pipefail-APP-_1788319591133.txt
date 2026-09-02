@@ -1,0 +1,102 @@
+root@srv1205734:~# #!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+APP_DIR="/var/www/Tracker_Truck_app"
+BRANCH="main"
+PM2_APP="tracker-app"
+PORT="5000"
+
+log() {
+  echo
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+fail() {
+  echo
+  echo "ERROR: $1"
+  echo
+  exit 1
+}
+
+cd "$APP_DIR" || fail "Application directory does not exist: $APP_DIR"
+
+# Load environment variables if the project has a .env file.
+# This allows npm run db:push to find DATABASE_URL.
+if [[ -f "$APP_DIR/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$APP_DIR/.env"
+  set +a
+fi
+
+command -v git >/dev/null 2>&1 || fail "git is not installed"
+command -v npm >/dev/null 2>&1 || fail "npm is not installed"
+command -v pm2 >/dev/null 2>&1 || fail "pm2 is not installed"
+command -v curl >/dev/null 2>&1 || fail "curl is not installed"
+
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  fail "DATABASE_URL is not available. Set it in the VPS environment or in $APP_DIR/.env before running this script."
+fi
+
+log "Checking for local changes"
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  fail "Local tracked changes detected. Commit, stash, or remove them before updating."
+fi
+
+log "Pulling latest code from origin/$BRANCH"
+git pull --ff-only origin "$BRANCH"
+
+log "Installing dependencies"
+npm ci
+
+log "Applying database schema changes"
+npm run db:push
+
+log "Building production application"
+npm run build
+
+log "Restarting PM2 application"
+
+if pm2 describe "$PM2_APP" >/dev/null 2>&1; then
+  pm2 restart "$PM2_APP" --update-env
+else
+  log "PM2 process does not exist; starting it"
+  pm2 start npm --name "$PM2_APP" -- start
+fi
+
+fiexit 1gs "$PM2_APP" --lines 50 --nostream || true
+
+[2026-09-02 03:25:51] Checking for local changes
+
+[2026-09-02 03:25:51] Pulling latest code from origin/main
+From https://github.com/mexkoala257/Tracker_Truck_app
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+
+[2026-09-02 03:25:51] Installing dependencies
+
+added 340 packages, and audited 341 packages in 18s
+
+25 packages are looking for funding
+  run `npm fund` for details
+
+9 vulnerabilities (2 low, 2 moderate, 5 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+[2026-09-02 03:26:10] Applying database schema changes
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+sh: 1: drizzle-kit: not found
+
+ ✖ Your session ended
