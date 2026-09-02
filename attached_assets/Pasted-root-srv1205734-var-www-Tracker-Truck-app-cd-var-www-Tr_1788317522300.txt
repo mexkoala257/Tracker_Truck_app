@@ -1,0 +1,33 @@
+root@srv1205734:/var/www/Tracker_Truck_app# cd /var/www/Tracker_Truck_app
+
+# Make an extra backup outside the Git repository
+cp package-lock.json "/root/package-lock.json.backup.$(date +%Y%m%d-%H%M%S)"
+
+# Stash only the conflicting local lockfile
+git stash push -m "VPS package-lock backup before main update" -- package-lock.json
+
+# Pull the synced version
+git pull --ff-only origin main
+
+# Run the update script again
+cd /root
+./update-tracker.sh
+Saved working directory and index state On main: VPS package-lock backup before main update
+From https://github.com/mexkoala257/Tracker_Truck_app
+ * branch            main       -> FETCH_HEAD
+Updating bb9d701..068ff40
+Fast-forward
+ attached_assets/Pasted-PM2-2026-09-01T22-38-47-PM2-log-Stopping-app-tracker-ap_1788303610726.txt |  49 +++++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Pasted-root-srv1205734-cd-var-www-Tracker-Truck-app-echo-PM2-p_1788315772962.txt | 197 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Pasted-root-srv1205734-var-www-Tracker-Truck-app-cd-var-www-Tr_1788315959146.txt |  99 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ client/src/components/ReturnEtaPanel.tsx                                                         | 202 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ client/src/components/TrackingMap.tsx                                                            |  49 ++++++++++++++++++++++++++++++-------------------
+ client/src/pages/MapView.tsx                                                                     |  14 ++++++++++++++
+ client/src/pages/RegionalSFMap.tsx                                                               |  40 +++++++++++++++++++++++++++++++++++++++-
+ package-lock.json                                                                                |  42 +++++++++++++++++++++---------------------
+ 8 files changed, 651 insertions(+), 41 deletions(-)
+ create mode 100644 attached_assets/Pasted-PM2-2026-09-01T22-38-47-PM2-log-Stopping-app-tracker-ap_1788303610726.txt
+ create mode 100644 attached_assets/Pasted-root-srv1205734-cd-var-www-Tracker-Truck-app-echo-PM2-p_1788315772962.txt
+ create mode 100644 attached_assets/Pasted-root-srv1205734-var-www-Tracker-Truck-app-cd-var-www-Tr_1788315959146.txt
+ create mode 100644 client/src/components/ReturnEtaPanel.tsx
+-bash: ./update-tracker.sh: No such file or directory
