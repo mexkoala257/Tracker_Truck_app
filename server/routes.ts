@@ -81,6 +81,27 @@ function updateVehicleMetadataCache(vehicleId: string, name: string, color: stri
   vehicleMetadataCache.set(vehicleId, { name, color });
 }
 
+async function loadVehicleMetadata(vehicleId: string): Promise<{ name: string; color: string }> {
+  const cached = vehicleMetadataCache.get(vehicleId);
+  if (cached) return cached;
+
+  try {
+    const vehicle = await storage.getVehicle(vehicleId);
+    if (vehicle) {
+      const metadata = {
+        name: vehicle.name || vehicleId,
+        color: vehicle.color || "#3b82f6",
+      };
+      updateVehicleMetadataCache(vehicleId, metadata.name, metadata.color);
+      return metadata;
+    }
+  } catch (error: any) {
+    log(`Could not load metadata for ${vehicleId}: ${error.message}`, "cache");
+  }
+
+  return { name: vehicleId, color: "#3b82f6" };
+}
+
 // Verify Motive webhook signature (uses SHA-1 per Motive docs)
 function verifyMotiveSignature(payload: string, signature: string, secret: string): boolean {
   const hmac = crypto.createHmac('sha1', secret);
@@ -126,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Set up the broadcast function for the poller
   setBroadcastFunction(async (vehicleId, data) => {
-    const vehicleMeta = getVehicleMetadata(vehicleId);
+    const vehicleMeta = await loadVehicleMetadata(vehicleId);
     const message = JSON.stringify({
       type: "location_update",
       data: {
@@ -362,16 +383,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate with Zod
       const validated = insertVehicleLocationSchema.parse(locationData);
 
-      // Ensure vehicle exists in vehicles table (auto-create if new)
-      const existingMeta = getVehicleMetadata(vehicleId);
-      if (existingMeta.name === vehicleId) {
-        // Vehicle not in cache with a custom name, create/update entry
+      // Ensure vehicle exists in vehicles table (auto-create if genuinely new).
+      // Always check the database before using the API ID as a default name so
+      // a temporary metadata-cache failure cannot overwrite an Admin name.
+      const existingVehicle = await storage.getVehicle(vehicleId);
+      if (!existingVehicle) {
         await storage.upsertVehicle({
           vehicleId,
           name: vehicleId, // Default name is the ID
           color: "#3b82f6", // Default blue color
         });
         updateVehicleMetadataCache(vehicleId, vehicleId, "#3b82f6");
+      } else {
+        updateVehicleMetadataCache(
+          vehicleId,
+          existingVehicle.name || vehicleId,
+          existingVehicle.color || "#3b82f6",
+        );
       }
 
       // Store in database
@@ -566,11 +594,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(locationCache.data);
       }
       
-      const locations = await storage.getAllVehicleLatestLocations();
-      
-      // Use metadata cache instead of DB query
+       const locations = await storage.getAllVehicleLatestLocations();
+       const vehicleMetadata = await storage.getAllVehicles();
+       const metadataById = new Map(
+         vehicleMetadata.map((vehicle) => [vehicle.vehicleId, vehicle]),
+       );
+
       const result = locations.map((loc: VehicleLocation) => {
-        const meta = getVehicleMetadata(loc.vehicleId);
+         const storedMeta = metadataById.get(loc.vehicleId);
+         const meta = storedMeta
+           ? {
+               name: storedMeta.name || loc.vehicleId,
+               color: storedMeta.color || "#3b82f6",
+             }
+           : getVehicleMetadata(loc.vehicleId);
         return {
           id: loc.vehicleId,
           name: meta.name,
