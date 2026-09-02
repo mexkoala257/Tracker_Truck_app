@@ -37,6 +37,7 @@ interface Vehicle {
   vehicleId: string;
   name: string;
   color: string | null;
+  homeLocationId: number | null;
   createdAt: string;
 }
 
@@ -78,6 +79,7 @@ export default function Admin() {
   const [editVehicle, setEditVehicle] = useState<Vehicle | null>(null);
   const [vehicleName, setVehicleName] = useState("");
   const [vehicleColor, setVehicleColor] = useState("#3b82f6");
+  const [vehicleHomeLocationId, setVehicleHomeLocationId] = useState("none");
   const [savingVehicle, setSavingVehicle] = useState(false);
 
   // Custom location dialog state
@@ -157,6 +159,7 @@ export default function Admin() {
     setEditVehicle(vehicle);
     setVehicleName(vehicle.name);
     setVehicleColor(vehicle.color || "#3b82f6");
+    setVehicleHomeLocationId(vehicle.homeLocationId ? String(vehicle.homeLocationId) : "none");
   };
 
   const handleSaveVehicle = async () => {
@@ -166,7 +169,11 @@ export default function Admin() {
       const response = await fetch(`/api/vehicles/${editVehicle.vehicleId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: vehicleName, color: vehicleColor }),
+        body: JSON.stringify({
+          name: vehicleName,
+          color: vehicleColor,
+          homeLocationId: vehicleHomeLocationId === "none" ? null : Number(vehicleHomeLocationId),
+        }),
       });
       if (response.ok) {
         toast({ title: "Vehicle updated successfully" });
@@ -179,6 +186,34 @@ export default function Admin() {
       toast({ title: "Error updating vehicle", variant: "destructive" });
     }
     setSavingVehicle(false);
+  };
+
+  const handleVehicleWarehouseChange = async (vehicle: Vehicle, value: string) => {
+    try {
+      const response = await fetch(`/api/vehicles/${vehicle.vehicleId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: vehicle.name,
+          color: vehicle.color || "#3b82f6",
+          homeLocationId: value === "none" ? null : Number(value),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update vehicle warehouse");
+      }
+
+      const updatedVehicle = await response.json();
+      setVehicles((previous) =>
+        previous.map((current) =>
+          current.vehicleId === vehicle.vehicleId ? updatedVehicle : current,
+        ),
+      );
+      toast({ title: "Vehicle warehouse updated" });
+    } catch (error) {
+      toast({ title: "Error updating vehicle warehouse", variant: "destructive" });
+    }
   };
 
   const handleDeleteVehicle = async () => {
@@ -328,6 +363,7 @@ export default function Admin() {
                   <TableHead className="w-12">Color</TableHead>
                   <TableHead>Vehicle ID</TableHead>
                   <TableHead>Display Name</TableHead>
+                  <TableHead>Warehouse</TableHead>
                   <TableHead>Added</TableHead>
                   <TableHead className="w-24 text-right">Actions</TableHead>
                 </TableRow>
@@ -335,13 +371,13 @@ export default function Admin() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Loading vehicles...
                     </TableCell>
                   </TableRow>
                 ) : vehicles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No vehicles found. Vehicles will appear here when they send GPS data.
                     </TableCell>
                   </TableRow>
@@ -356,6 +392,28 @@ export default function Admin() {
                       </TableCell>
                       <TableCell className="font-mono text-sm">{vehicle.vehicleId}</TableCell>
                       <TableCell>{vehicle.name}</TableCell>
+                      <TableCell>
+                        <Select
+                          value={vehicle.homeLocationId ? String(vehicle.homeLocationId) : "none"}
+                          onValueChange={(value) => handleVehicleWarehouseChange(vehicle, value)}
+                          disabled={customLocations.length === 0}
+                        >
+                          <SelectTrigger
+                            className="w-[190px]"
+                            data-testid={`select-vehicle-warehouse-${vehicle.vehicleId}`}
+                          >
+                            <SelectValue placeholder="No warehouse" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No warehouse assigned</SelectItem>
+                            {customLocations.map((location) => (
+                              <SelectItem key={location.id} value={String(location.id)}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {new Date(vehicle.createdAt).toLocaleDateString()}
                       </TableCell>
@@ -579,6 +637,31 @@ export default function Admin() {
                   className="flex-1 font-mono"
                 />
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="vehicleHomeLocation">Warehouse Location</Label>
+              <Select
+                value={vehicleHomeLocationId}
+                onValueChange={setVehicleHomeLocationId}
+                disabled={customLocations.length === 0}
+              >
+                <SelectTrigger id="vehicleHomeLocation" data-testid="select-edit-vehicle-warehouse">
+                  <SelectValue placeholder="Choose a warehouse" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No warehouse assigned</SelectItem>
+                  {customLocations.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {customLocations.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Add a custom location before assigning a warehouse.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

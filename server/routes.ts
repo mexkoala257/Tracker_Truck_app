@@ -498,16 +498,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upsert vehicle metadata (name, color)
+  // Upsert vehicle metadata (name, color, warehouse assignment)
   app.post("/api/vehicles/:vehicleId", async (req, res) => {
     try {
       const { vehicleId } = req.params;
-      const { name, color } = req.body;
+      const { name, color, homeLocationId } = req.body;
+      const normalizedHomeLocationId =
+        homeLocationId === null || homeLocationId === undefined
+          ? homeLocationId
+          : Number(homeLocationId);
+
+      if (
+        normalizedHomeLocationId !== null &&
+        normalizedHomeLocationId !== undefined &&
+        (!Number.isInteger(normalizedHomeLocationId) || normalizedHomeLocationId < 1)
+      ) {
+        return res.status(400).json({ error: "Invalid warehouse location" });
+      }
+
+      if (normalizedHomeLocationId !== null && normalizedHomeLocationId !== undefined) {
+        const locations = await storage.getAllCustomLocations();
+        if (!locations.some((location) => location.id === normalizedHomeLocationId)) {
+          return res.status(404).json({ error: "Warehouse location not found" });
+        }
+      }
       
       const vehicleData = insertVehicleSchema.parse({
         vehicleId,
         name,
         color,
+        homeLocationId: normalizedHomeLocationId,
       });
       
       const vehicle = await storage.upsertVehicle(vehicleData);

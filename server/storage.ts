@@ -71,12 +71,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const metadataUpdates = {
+      name: vehicle.name,
+      color: vehicle.color,
+      ...(vehicle.homeLocationId !== undefined ? { homeLocationId: vehicle.homeLocationId } : {}),
+    };
     const [result] = await db
       .insert(vehicles)
       .values(vehicle)
       .onConflictDoUpdate({
         target: vehicles.vehicleId,
-        set: { name: vehicle.name, color: vehicle.color },
+        set: metadataUpdates,
       })
       .returning();
     return result;

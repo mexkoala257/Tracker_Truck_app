@@ -21,6 +21,7 @@ export const vehicles = pgTable("vehicles", {
   vehicleId: text("vehicle_id").primaryKey(),
   name: text("name").notNull(),
   color: text("color").default("#3b82f6"),
+  homeLocationId: integer("home_location_id").references(() => customLocations.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
