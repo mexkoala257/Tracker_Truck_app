@@ -660,6 +660,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Home-location assignments for the map display pages
+  app.get("/api/map-home-locations", async (req, res) => {
+    try {
+      const assignments = await storage.getMapHomeLocations();
+      const result: Record<string, {
+        locationId: number;
+        location: CustomLocation;
+      } | null> = {
+        map: null,
+        "regional-sf": null,
+      };
+
+      for (const assignment of assignments) {
+        if (assignment.mapKey in result) {
+          result[assignment.mapKey] = {
+            locationId: assignment.locationId,
+            location: assignment.location,
+          };
+        }
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/map-home-locations/:mapKey", async (req, res) => {
+    try {
+      const { mapKey } = req.params;
+      if (mapKey !== "map" && mapKey !== "regional-sf") {
+        return res.status(400).json({ error: "Invalid map key" });
+      }
+
+      if (req.body?.locationId === null) {
+        await storage.clearMapHomeLocation(mapKey);
+        return res.json({ mapKey, assignment: null });
+      }
+
+      const locationId = Number(req.body?.locationId);
+      if (!Number.isInteger(locationId) || locationId < 1) {
+        return res.status(400).json({ error: "A valid custom location is required" });
+      }
+
+      const location = (await storage.getAllCustomLocations())
+        .find((candidate) => candidate.id === locationId);
+      if (!location) {
+        return res.status(404).json({ error: "Custom location not found" });
+      }
+
+      const assignment = await storage.setMapHomeLocation(mapKey, locationId);
+      log(`Assigned ${location.name} as the ${mapKey} map home location`, "admin");
+      res.json({
+        mapKey,
+        assignment: {
+          locationId: assignment.locationId,
+          location: assignment.location,
+        },
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   // Custom locations routes
   app.get("/api/custom-locations", async (req, res) => {
     try {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
-import ReturnEtaPanel from "@/components/ReturnEtaPanel";
+import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaPanel";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, ZoomIn, ZoomOut, Lock } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -10,7 +10,7 @@ const STORAGE_KEY = "mapview-zoom";
 const DEFAULT_ZOOM = 9;
 const MIN_ZOOM = 6;
 const MAX_ZOOM = 17;
-const ARLINGTON_WAREHOUSE = {
+const DEFAULT_ARLINGTON_WAREHOUSE: ReturnEtaWarehouse = {
   name: "Arlington Warehouse",
   latitude: 44.3792,
   longitude: -97.1406,
@@ -37,6 +37,7 @@ function saveZoom(zoom: number) {
 
 export default function MapView() {
   const [zoom, setZoom] = useState(getSavedZoom);
+  const [warehouse, setWarehouse] = useState<ReturnEtaWarehouse>(DEFAULT_ARLINGTON_WAREHOUSE);
   const [vehicleData, setVehicleData] = useState<{
     id: string;
     name?: string;
@@ -71,6 +72,24 @@ export default function MapView() {
 
   useEffect(() => {
     loadVehicles();
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/map-home-locations")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((assignments) => {
+        const selected = assignments?.map?.location;
+        if (selected) {
+          setWarehouse({
+            name: selected.name,
+            latitude: selected.latitude,
+            longitude: selected.longitude,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading Map page home location:", error);
+      });
   }, []);
 
   const { isConnected } = useWebSocket((data) => {
@@ -114,10 +133,10 @@ export default function MapView() {
           onZoomChange={handleZoomChange}
           autoFitBounds={false}
           baseLocation={{
-            name: ARLINGTON_WAREHOUSE.name,
-            lat: ARLINGTON_WAREHOUSE.latitude,
-            lon: ARLINGTON_WAREHOUSE.longitude,
-            address: "107 Opportunity Dr, Arlington, SD",
+            name: warehouse.name,
+            lat: warehouse.latitude,
+            lon: warehouse.longitude,
+            address: `${warehouse.latitude.toFixed(4)}, ${warehouse.longitude.toFixed(4)}`,
           }}
         />
       ) : (
@@ -154,7 +173,7 @@ export default function MapView() {
         </div>
       )}
 
-      <ReturnEtaPanel vehicles={vehicleData} warehouse={ARLINGTON_WAREHOUSE} />
+      <ReturnEtaPanel vehicles={vehicleData} warehouse={warehouse} />
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-background/50 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 flex items-center gap-3">
         <Button

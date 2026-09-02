@@ -93,10 +93,24 @@ export default function RegionalSFMap() {
   useEffect(() => {
     const loadWarehouse = async () => {
       try {
-        const response = await fetch("/api/custom-locations");
-        if (!response.ok) return;
+        const assignmentsResponse = await fetch("/api/map-home-locations");
+        if (assignmentsResponse.ok) {
+          const assignments = await assignmentsResponse.json();
+          const selected = assignments["regional-sf"]?.location;
+          if (selected) {
+            setWarehouse({
+              name: selected.name,
+              latitude: selected.latitude,
+              longitude: selected.longitude,
+            });
+            return;
+          }
+        }
 
-        const locations = await response.json();
+        const locationsResponse = await fetch("/api/custom-locations");
+        if (!locationsResponse.ok) return;
+
+        const locations = await locationsResponse.json();
         const configuredWarehouse = locations.find(
           (location: any) =>
             location.icon?.toLowerCase() === "warehouse" ||

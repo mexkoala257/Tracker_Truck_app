@@ -70,3 +70,14 @@ export const insertCustomLocationSchema = createInsertSchema(customLocations).om
 
 export type InsertCustomLocation = z.infer<typeof insertCustomLocationSchema>;
 export type CustomLocation = typeof customLocations.$inferSelect;
+
+// Shared home-location assignments for each map display.
+export const mapHomeLocations = pgTable("map_home_locations", {
+  mapKey: text("map_key").primaryKey(),
+  locationId: integer("location_id")
+    .notNull()
+    .references(() => customLocations.id, { onDelete: "cascade" }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type MapHomeLocation = typeof mapHomeLocations.$inferSelect;

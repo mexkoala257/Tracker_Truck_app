@@ -10,7 +10,8 @@ import {
   users,
   vehicles,
   vehicleLocations,
-  customLocations
+  customLocations,
+  mapHomeLocations
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, gte, lte, and, sql } from "drizzle-orm";
@@ -38,6 +39,19 @@ export interface IStorage {
   updateCustomLocation(id: number, location: Partial<InsertCustomLocation>): Promise<CustomLocation | undefined>;
   deleteCustomLocation(id: number): Promise<void>;
   getAllCustomLocations(): Promise<CustomLocation[]>;
+
+  // Map home-location assignment methods
+  getMapHomeLocations(): Promise<Array<{
+    mapKey: string;
+    locationId: number;
+    location: CustomLocation;
+  }>>;
+  setMapHomeLocation(mapKey: string, locationId: number): Promise<{
+    mapKey: string;
+    locationId: number;
+    location: CustomLocation;
+  }>;
+  clearMapHomeLocation(mapKey: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -174,6 +188,53 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCustomLocations(): Promise<CustomLocation[]> {
     return db.select().from(customLocations);
+  }
+
+  async getMapHomeLocations(): Promise<Array<{
+    mapKey: string;
+    locationId: number;
+    location: CustomLocation;
+  }>> {
+    const rows = await db
+      .select({
+        mapKey: mapHomeLocations.mapKey,
+        locationId: mapHomeLocations.locationId,
+        location: customLocations,
+      })
+      .from(mapHomeLocations)
+      .innerJoin(customLocations, eq(mapHomeLocations.locationId, customLocations.id));
+
+    return rows;
+  }
+
+  async setMapHomeLocation(mapKey: string, locationId: number): Promise<{
+    mapKey: string;
+    locationId: number;
+    location: CustomLocation;
+  }> {
+    await db
+      .insert(mapHomeLocations)
+      .values({ mapKey, locationId })
+      .onConflictDoUpdate({
+        target: mapHomeLocations.mapKey,
+        set: { locationId, updatedAt: new Date() },
+      });
+
+    const [result] = await db
+      .select({
+        mapKey: mapHomeLocations.mapKey,
+        locationId: mapHomeLocations.locationId,
+        location: customLocations,
+      })
+      .from(mapHomeLocations)
+      .innerJoin(customLocations, eq(mapHomeLocations.locationId, customLocations.id))
+      .where(eq(mapHomeLocations.mapKey, mapKey));
+
+    return result;
+  }
+
+  async clearMapHomeLocation(mapKey: string): Promise<void> {
+    await db.delete(mapHomeLocations).where(eq(mapHomeLocations.mapKey, mapKey));
   }
 }
 

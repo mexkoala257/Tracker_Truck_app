@@ -50,6 +50,11 @@ interface CustomLocation {
   description: string | null;
 }
 
+interface MapHomeAssignment {
+  locationId: number;
+  location: CustomLocation;
+}
+
 const iconOptions = [
   { value: "marker", label: "Marker", icon: MapPin },
   { value: "home", label: "Home Base", icon: Home },
@@ -62,6 +67,10 @@ const iconOptions = [
 export default function Admin() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
+  const [mapHomeLocations, setMapHomeLocations] = useState<Record<string, MapHomeAssignment | null>>({
+    map: null,
+    "regional-sf": null,
+  });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -81,6 +90,7 @@ export default function Admin() {
   const [locationColor, setLocationColor] = useState("#ef4444");
   const [locationDescription, setLocationDescription] = useState("");
   const [savingLocation, setSavingLocation] = useState(false);
+  const [savingMapHome, setSavingMapHome] = useState<string | null>(null);
 
   // Delete confirmation state
   const [deleteVehicleId, setDeleteVehicleId] = useState<string | null>(null);
@@ -89,9 +99,10 @@ export default function Admin() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [vehiclesRes, locationsRes] = await Promise.all([
+      const [vehiclesRes, locationsRes, mapHomeRes] = await Promise.all([
         fetch("/api/vehicles/metadata"),
         fetch("/api/custom-locations"),
+        fetch("/api/map-home-locations"),
       ]);
       
       if (vehiclesRes.ok) {
@@ -100,11 +111,42 @@ export default function Admin() {
       if (locationsRes.ok) {
         setCustomLocations(await locationsRes.json());
       }
+      if (mapHomeRes.ok) {
+        setMapHomeLocations(await mapHomeRes.json());
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast({ title: "Error loading data", variant: "destructive" });
     }
     setLoading(false);
+  };
+
+  const handleMapHomeLocationChange = async (mapKey: "map" | "regional-sf", value: string) => {
+    setSavingMapHome(mapKey);
+    try {
+      const response = await fetch(`/api/map-home-locations/${mapKey}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locationId: value === "default" ? null : Number(value),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save map home location");
+      }
+
+      const result = await response.json();
+      setMapHomeLocations((previous) => ({
+        ...previous,
+        [mapKey]: result.assignment,
+      }));
+      toast({ title: "Map home location updated" });
+    } catch (error) {
+      toast({ title: "Error updating map home location", variant: "destructive" });
+    } finally {
+      setSavingMapHome(null);
+    }
   };
 
   useEffect(() => {
@@ -342,6 +384,75 @@ export default function Admin() {
               </TableBody>
             </Table>
           </div>
+        </section>
+
+        {/* Map Home Locations Section */}
+        <section className="mt-12 mb-12">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Warehouse className="w-5 h-5" />
+              Map Home Locations
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Choose which custom location each map uses as its return destination and home marker.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-border p-4">
+              <Label htmlFor="map-home-location">Map page</Label>
+              <p className="mt-1 mb-3 text-xs text-muted-foreground">
+                Used by the general Map page and its return ETAs.
+              </p>
+              <Select
+                value={String(mapHomeLocations.map?.locationId ?? "default")}
+                onValueChange={(value) => handleMapHomeLocationChange("map", value)}
+                disabled={savingMapHome === "map" || customLocations.length === 0}
+              >
+                <SelectTrigger id="map-home-location" data-testid="select-map-home-location">
+                  <SelectValue placeholder="Choose a home location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Built-in Arlington Warehouse</SelectItem>
+                  {customLocations.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-lg border border-border p-4">
+              <Label htmlFor="regional-sf-home-location">Sioux Falls regional map</Label>
+              <p className="mt-1 mb-3 text-xs text-muted-foreground">
+                Used by the regional map and its return ETAs.
+              </p>
+              <Select
+                value={String(mapHomeLocations["regional-sf"]?.locationId ?? "default")}
+                onValueChange={(value) => handleMapHomeLocationChange("regional-sf", value)}
+                disabled={savingMapHome === "regional-sf" || customLocations.length === 0}
+              >
+                <SelectTrigger id="regional-sf-home-location" data-testid="select-regional-sf-home-location">
+                  <SelectValue placeholder="Choose a home location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Use Main Warehouse fallback</SelectItem>
+                  {customLocations.map((location) => (
+                    <SelectItem key={location.id} value={String(location.id)}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {customLocations.length === 0 && (
+            <p className="mt-3 text-xs text-amber-500">
+              Add at least one custom location below before assigning a map home location.
+            </p>
+          )}
         </section>
 
         {/* Custom Locations Section */}

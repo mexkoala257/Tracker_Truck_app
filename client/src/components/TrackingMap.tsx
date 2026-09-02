@@ -420,6 +420,12 @@ export default function TrackingMap({
         )}
 
         {customLocations.map((location) => {
+          const duplicatesBaseLocation =
+            baseLocation &&
+            Math.abs(location.latitude - baseLocation.lat) < 0.000001 &&
+            Math.abs(location.longitude - baseLocation.lon) < 0.000001;
+          if (duplicatesBaseLocation) return null;
+
           const IconComponent = getIconComponent(location.icon || "marker");
           return (
             <Marker
