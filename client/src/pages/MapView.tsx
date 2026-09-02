@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaPanel";
+import ActiveVehiclesPanel from "@/components/ActiveVehiclesPanel";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Radio, Satellite, Truck, ZoomIn, ZoomOut, Lock } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -192,6 +193,10 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
             <span className="text-muted-foreground"> vehicle{displayedVehicles.length !== 1 ? 's' : ''}</span>
           </span>
         </div>
+      )}
+
+      {dispatchOnly && (
+        <ActiveVehiclesPanel vehicles={displayedVehicles} warehouse={warehouse} />
       )}
 
       <ReturnEtaPanel vehicles={displayedVehicles} warehouse={warehouse} />
