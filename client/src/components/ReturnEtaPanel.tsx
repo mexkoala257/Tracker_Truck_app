@@ -87,7 +87,7 @@ function estimateReturn(
   const isStale = ageMinutes > STALE_LOCATION_MINUTES;
   const isAtWarehouse = roadMiles < 0.75;
 
-  if (isAtWarehouse || isStale) {
+  if (isAtWarehouse) {
     return { vehicle, eta: null, isAtWarehouse, isStale };
   }
 
@@ -121,10 +121,10 @@ export default function ReturnEtaPanel({
   }
 
   const estimates = vehicles
-    .filter((vehicle) => !vehicle.id.startsWith("asset-"))
+    .filter((vehicle) => !vehicle.id.startsWith("asset-") && vehicle.id !== "HOME")
     .map((vehicle) => estimateReturn(vehicle, warehouse, now));
-  const activeEstimates = estimates
-    .filter((estimate) => !estimate.isAtWarehouse && !estimate.isStale && estimate.eta)
+  const returnEstimates = estimates
+    .filter((estimate) => !estimate.isAtWarehouse && estimate.eta)
     .sort((a, b) => (a.eta?.getTime() || 0) - (b.eta?.getTime() || 0));
   const atWarehouseCount = estimates.filter((estimate) => estimate.isAtWarehouse).length;
   const staleCount = estimates.filter(
@@ -153,16 +153,16 @@ export default function ReturnEtaPanel({
       </div>
 
       <div className="max-h-[42vh] overflow-y-auto p-3">
-        {activeEstimates.length === 0 ? (
+        {returnEstimates.length === 0 ? (
           <div className="px-3 py-4 text-center">
-            <p className="text-sm font-medium">No active return estimates</p>
+            <p className="text-sm font-medium">No trucks currently away</p>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Arrival times appear when a truck has a current GPS position away from the warehouse.
+              Trucks away from the warehouse will appear here with an estimated arrival time.
             </p>
           </div>
         ) : (
           <div className="space-y-1.5">
-            {activeEstimates.map((estimate) => (
+            {returnEstimates.map((estimate) => (
               <div
                 key={estimate.vehicle.id}
                 className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
@@ -176,8 +176,17 @@ export default function ReturnEtaPanel({
                     <span className="truncate text-sm font-semibold">
                       {estimate.vehicle.name || estimate.vehicle.id}
                     </span>
+                    {estimate.isStale && (
+                      <span className="shrink-0 text-[9px] font-medium uppercase tracking-wide text-amber-400">
+                        last known
+                      </span>
+                    )}
                   </div>
-                  <span className="shrink-0 text-base font-bold text-primary">
+                  <span
+                    className={`shrink-0 text-base font-bold ${
+                      estimate.isStale ? "text-amber-400" : "text-primary"
+                    }`}
+                  >
                     {estimate.eta ? formatCentralTime(estimate.eta) : "Unavailable"}
                   </span>
                 </div>
