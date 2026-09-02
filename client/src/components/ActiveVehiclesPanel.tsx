@@ -17,9 +17,12 @@ type Warehouse = {
   longitude: number;
 };
 
+type ReferenceLocation = Warehouse;
+
 type ActiveVehiclesPanelProps = {
   vehicles: ActiveVehicle[];
   warehouse: Warehouse;
+  locations: ReferenceLocation[];
 };
 
 const AT_WAREHOUSE_MILES = 0.75;
@@ -70,24 +73,49 @@ function statusLabel(status: string): string {
 export default function ActiveVehiclesPanel({
   vehicles,
   warehouse,
+  locations,
 }: ActiveVehiclesPanelProps) {
   const [expanded, setExpanded] = useState(true);
+
+  const referenceLocations = useMemo(() => {
+    const allLocations = [warehouse, ...locations];
+    return allLocations.filter(
+      (location, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            candidate.name === location.name &&
+            candidate.latitude === location.latitude &&
+            candidate.longitude === location.longitude,
+        ) === index,
+    );
+  }, [locations, warehouse]);
 
   const vehiclesAway = useMemo(
     () =>
       vehicles
         .map((vehicle) => ({
           vehicle,
-          distance: distanceMiles(
-            warehouse.latitude,
-            warehouse.longitude,
-            vehicle.location.lat,
-            vehicle.location.lon,
+          nearestLocation: referenceLocations.reduce(
+            (nearest, location) => {
+              const distance = distanceMiles(
+                location.latitude,
+                location.longitude,
+                vehicle.location.lat,
+                vehicle.location.lon,
+              );
+              return distance < nearest.distance
+                ? { location, distance }
+                : nearest;
+            },
+            {
+              location: referenceLocations[0],
+              distance: Number.POSITIVE_INFINITY,
+            },
           ),
         }))
-        .filter(({ distance }) => distance >= AT_WAREHOUSE_MILES)
-        .sort((a, b) => b.distance - a.distance),
-    [vehicles, warehouse],
+        .filter(({ nearestLocation }) => nearestLocation.distance >= AT_WAREHOUSE_MILES)
+        .sort((a, b) => b.nearestLocation.distance - a.nearestLocation.distance),
+    [referenceLocations, vehicles],
   );
 
   return (
@@ -107,7 +135,7 @@ export default function ActiveVehiclesPanel({
             Active vehicles
           </p>
           <p className="mt-0.5 truncate text-sm font-semibold">
-            {vehiclesAway.length} outside {warehouse.name}
+            {vehiclesAway.length} outside saved locations
           </p>
         </div>
         <ChevronDown
@@ -122,14 +150,14 @@ export default function ActiveVehiclesPanel({
           {vehiclesAway.length === 0 ? (
             <div className="px-3 py-5 text-center">
               <MapPin className="mx-auto h-5 w-5 text-emerald-400" />
-              <p className="mt-2 text-sm font-medium">All vehicles are at the warehouse</p>
+              <p className="mt-2 text-sm font-medium">All vehicles are at a saved location</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Trucks will appear here as they leave {warehouse.name}.
+                Trucks will appear here when they leave a warehouse or saved location.
               </p>
             </div>
           ) : (
             <div className="space-y-1.5">
-              {vehiclesAway.map(({ vehicle, distance }) => (
+              {vehiclesAway.map(({ vehicle, nearestLocation }) => (
                 <div
                   key={vehicle.id}
                   className="rounded-lg border border-border/60 bg-background/55 px-3 py-2"
@@ -145,11 +173,13 @@ export default function ActiveVehiclesPanel({
                       </span>
                     </div>
                     <span className="shrink-0 text-sm font-bold text-primary">
-                      {formatDistance(distance)}
+                      {formatDistance(nearestLocation.distance)}
                     </span>
                   </div>
                   <div className="mt-1.5 flex items-center justify-between gap-3 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    <span className="capitalize">{statusLabel(vehicle.status)}</span>
+                    <span className="min-w-0 truncate capitalize">
+                      {statusLabel(vehicle.status)} · {nearestLocation.location.name}
+                    </span>
                     <span>{formatLastUpdate(vehicle.timestamp)}</span>
                   </div>
                 </div>

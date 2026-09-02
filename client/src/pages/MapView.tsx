@@ -44,9 +44,17 @@ type MapViewProps = {
   dispatchOnly?: boolean;
 };
 
+type CustomLocation = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+};
+
 export default function MapView({ dispatchOnly = false }: MapViewProps) {
   const [zoom, setZoom] = useState(getSavedZoom);
   const [warehouse, setWarehouse] = useState<ReturnEtaWarehouse>(DEFAULT_ARLINGTON_WAREHOUSE);
+  const [customLocations, setCustomLocations] = useState<CustomLocation[]>([]);
   const [vehicleData, setVehicleData] = useState<{
     id: string;
     name?: string;
@@ -84,21 +92,34 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
   }, []);
 
   useEffect(() => {
-    fetch("/api/map-home-locations")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((assignments) => {
-        const selected = assignments?.map?.location;
-        if (selected) {
-          setWarehouse({
-            name: selected.name,
-            latitude: selected.latitude,
-            longitude: selected.longitude,
-          });
+    const loadMapLocations = async () => {
+      try {
+        const [assignmentsResponse, locationsResponse] = await Promise.all([
+          fetch("/api/map-home-locations"),
+          fetch("/api/custom-locations"),
+        ]);
+
+        if (locationsResponse.ok) {
+          setCustomLocations(await locationsResponse.json());
         }
-      })
-      .catch((error) => {
-        console.error("Error loading Map page home location:", error);
-      });
+
+        if (assignmentsResponse.ok) {
+          const assignments = await assignmentsResponse.json();
+          const selected = assignments?.map?.location;
+          if (selected) {
+            setWarehouse({
+              name: selected.name,
+              latitude: selected.latitude,
+              longitude: selected.longitude,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading Map page locations:", error);
+      }
+    };
+
+    loadMapLocations();
   }, []);
 
   const { isConnected } = useWebSocket((data) => {
@@ -196,7 +217,11 @@ export default function MapView({ dispatchOnly = false }: MapViewProps) {
       )}
 
       {dispatchOnly && (
-        <ActiveVehiclesPanel vehicles={displayedVehicles} warehouse={warehouse} />
+        <ActiveVehiclesPanel
+          vehicles={displayedVehicles}
+          warehouse={warehouse}
+          locations={customLocations}
+        />
       )}
 
       <ReturnEtaPanel vehicles={displayedVehicles} warehouse={warehouse} />
