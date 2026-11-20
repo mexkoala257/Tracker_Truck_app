@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useOfficeTheme } from "@/lib/theme";
@@ -215,6 +215,71 @@ export default function Admin() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [refreshingFeeds, setRefreshingFeeds] = useState(false);
   const { toast } = useToast();
+
+  // Protect unsaved schedule edits from background WebSocket display_state_update broadcasts + auto-save
+  const sfScheduleDirtyRef = useRef(false);
+  const sfScheduleEditAtRef = useRef(0);
+  const truckScheduleDirtyRef = useRef(false);
+  const truckScheduleEditAtRef = useRef(0);
+  const renewalsDirtyRef = useRef(false);
+  const sfAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const truckAutoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleSfAutoSave = useCallback((nextSfSchedule: any) => {
+    sfScheduleDirtyRef.current = true;
+    const editStamp = Date.now();
+    sfScheduleEditAtRef.current = editStamp;
+    if (sfAutoSaveTimerRef.current) clearTimeout(sfAutoSaveTimerRef.current);
+    sfAutoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/display/schedules", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sfSchedule: nextSfSchedule }),
+        });
+        if (res.ok && sfScheduleEditAtRef.current === editStamp) {
+          sfScheduleDirtyRef.current = false;
+        }
+      } catch {}
+    }, 700);
+  }, []);
+
+  const scheduleTruckAutoSave = useCallback((nextTruckSchedule: any) => {
+    truckScheduleDirtyRef.current = true;
+    const editStamp = Date.now();
+    truckScheduleEditAtRef.current = editStamp;
+    if (truckAutoSaveTimerRef.current) clearTimeout(truckAutoSaveTimerRef.current);
+    truckAutoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/display/schedules", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ truckSchedule: nextTruckSchedule }),
+        });
+        if (res.ok && truckScheduleEditAtRef.current === editStamp) {
+          truckScheduleDirtyRef.current = false;
+        }
+      } catch {}
+    }, 700);
+  }, []);
+
+  const applyIncomingServerDisplayState = useCallback((incoming: any) => {
+    if (!incoming) return;
+    setDisplayState((prev: any) => {
+      if (!prev) return incoming;
+      const keepLocalSf =
+        sfScheduleDirtyRef.current || Date.now() - sfScheduleEditAtRef.current < 15000;
+      const keepLocalTruck =
+        truckScheduleDirtyRef.current || Date.now() - truckScheduleEditAtRef.current < 15000;
+      const keepLocalRenewals = renewalsDirtyRef.current;
+      return {
+        ...incoming,
+        sfSchedule: keepLocalSf ? prev.sfSchedule : incoming.sfSchedule,
+        truckSchedule: keepLocalTruck ? prev.truckSchedule : incoming.truckSchedule,
+        renewalReminders: keepLocalRenewals ? prev.renewalReminders : incoming.renewalReminders,
+      };
+    });
+  }, []);
 
   // New announcement form
   const [newAuthor, setNewAuthor] = useState("Jackie");
@@ -495,7 +560,7 @@ export default function Admin() {
       });
       fetch("/api/display/state")
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => d && setDisplayState(d))
+        .then((d) => d && applyIncomingServerDisplayState(d))
         .catch(() => {});
     } else if (msg.type === "display_pairing_update" && msg.payload) {
       const incoming = msg.payload.pendingPairings || [];
@@ -519,7 +584,7 @@ export default function Admin() {
           : prev,
       );
     } else if (msg.type === "display_state_update" && msg.payload) {
-      setDisplayState(msg.payload);
+      applyIncomingServerDisplayState(msg.payload);
     } else if (msg.type === "display_health_alert" && msg.payload) {
       const alert = msg.payload;
       toast({
@@ -858,6 +923,14 @@ export default function Admin() {
 
   const saveSchedulesPayload = async (partial: any, successTitle = "Schedules saved & pushed to TVs") => {
     setSavingSchedules(true);
+    if (partial.sfSchedule && sfAutoSaveTimerRef.current) {
+      clearTimeout(sfAutoSaveTimerRef.current);
+      sfAutoSaveTimerRef.current = null;
+    }
+    if (partial.truckSchedule && truckAutoSaveTimerRef.current) {
+      clearTimeout(truckAutoSaveTimerRef.current);
+      truckAutoSaveTimerRef.current = null;
+    }
     try {
       const res = await fetch("/api/display/schedules", {
         method: "PUT",
@@ -866,7 +939,10 @@ export default function Admin() {
       });
       if (!res.ok) throw new Error("Save failed");
       const data = await res.json();
-      if (data.state) setDisplayState(data.state);
+      if (partial.sfSchedule) sfScheduleDirtyRef.current = false;
+      if (partial.truckSchedule) truckScheduleDirtyRef.current = false;
+      if (partial.renewalReminders) renewalsDirtyRef.current = false;
+      if (data.state) applyIncomingServerDisplayState(data.state);
       toast({ title: successTitle });
     } catch {
       toast({ title: "Error saving schedule changes", variant: "destructive" });
@@ -902,9 +978,19 @@ export default function Admin() {
   }, [normalizedTruckSchedule, selectedMondayIso]);
 
   const updateSelectedTruckWeek = useCallback(
-    (nextWeekObj: TruckWeekBlock, syncDriverRoster = false) => {
+    (
+      nextWeekOrUpdater: TruckWeekBlock | ((currWeek: TruckWeekBlock) => TruckWeekBlock),
+      syncDriverRoster = false,
+    ) => {
       setDisplayState((prev: any) => {
         const currentNorm = normalizeTruckScheduleState(prev?.truckSchedule);
+        const baseWeek =
+          currentNorm.weeks[selectedMondayIso] ||
+          createBlankWeekBlock(selectedMondayIso, currentNorm.driverRoster);
+        const nextWeekObj =
+          typeof nextWeekOrUpdater === "function"
+            ? nextWeekOrUpdater(baseWeek)
+            : nextWeekOrUpdater;
         const nextWeeks = {
           ...currentNorm.weeks,
           [selectedMondayIso]: {
@@ -920,17 +1006,19 @@ export default function Admin() {
             }))
           : currentNorm.driverRoster;
 
+        const nextTruckSchedule = normalizeTruckScheduleState({
+          ...currentNorm,
+          weeks: nextWeeks,
+          driverRoster: nextRoster,
+        });
+        scheduleTruckAutoSave(nextTruckSchedule);
         return {
           ...prev,
-          truckSchedule: normalizeTruckScheduleState({
-            ...currentNorm,
-            weeks: nextWeeks,
-            driverRoster: nextRoster,
-          }),
+          truckSchedule: nextTruckSchedule,
         };
       });
     },
-    [selectedMondayIso],
+    [selectedMondayIso, scheduleTruckAutoSave],
   );
 
   const handleAddSavedRoute = useCallback(
@@ -1161,9 +1249,19 @@ export default function Admin() {
   );
 
   const updateSelectedSfWeek = useCallback(
-    (nextWeekObj: SfWeekBlock, syncMemberRoster = false) => {
+    (
+      nextWeekOrUpdater: SfWeekBlock | ((currWeek: SfWeekBlock) => SfWeekBlock),
+      syncMemberRoster = false,
+    ) => {
       setDisplayState((prev: any) => {
         const currentNorm = normalizeSfScheduleState(prev?.sfSchedule);
+        const baseWeek =
+          currentNorm.weeks[sfSelectedMondayIso] ||
+          createBlankSfWeekBlock(sfSelectedMondayIso, currentNorm.memberRoster);
+        const nextWeekObj =
+          typeof nextWeekOrUpdater === "function"
+            ? nextWeekOrUpdater(baseWeek)
+            : nextWeekOrUpdater;
         const nextWeeks = {
           ...currentNorm.weeks,
           [sfSelectedMondayIso]: {
@@ -1178,17 +1276,19 @@ export default function Admin() {
             }))
           : currentNorm.memberRoster;
 
+        const nextSfSchedule = normalizeSfScheduleState({
+          ...currentNorm,
+          weeks: nextWeeks,
+          memberRoster: nextRoster,
+        });
+        scheduleSfAutoSave(nextSfSchedule);
         return {
           ...prev,
-          sfSchedule: normalizeSfScheduleState({
-            ...currentNorm,
-            weeks: nextWeeks,
-            memberRoster: nextRoster,
-          }),
+          sfSchedule: nextSfSchedule,
         };
       });
     },
-    [sfSelectedMondayIso],
+    [sfSelectedMondayIso, scheduleSfAutoSave],
   );
 
   const handleAddSavedSfShift = useCallback(
@@ -5198,26 +5298,29 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                           </td>
                           {(row.days || []).map((val: string, cIdx: number) => (
                             <td key={cIdx} className="p-1.5">
-                              <RouteCellPicker
-                                value={val}
-                                driverName={row.driver}
-                                driverRouteOptions={drvRoutes.options}
-                                allRouteOptions={normalizedTruckSchedule.routeOptions}
-                                isDriverScoped={drvRoutes.isDriverScoped}
-                                accentColor={row.color || "#38bdf8"}
-                                onChange={(nextVal) => {
-                                  const rows = [...selectedTruckWeek.rows];
-                                  const nextCells = [...rows[rIdx].days];
-                                  nextCells[cIdx] = nextVal;
-                                  rows[rIdx] = { ...rows[rIdx], days: nextCells };
-                                  updateSelectedTruckWeek({ ...selectedTruckWeek, rows });
-                                }}
-                                onAddRouteToDriver={(newRt) => handleAddSavedRoute(newRt, row.driver)}
-                                onOpenDriverRoutesModal={() => {
-                                  setRouteManagerTargetDriver(row.driver);
-                                  setRouteManagerOpen(true);
-                                }}
-                              />
+                                <RouteCellPicker
+                                  value={val}
+                                  driverName={row.driver}
+                                  driverRouteOptions={drvRoutes.options}
+                                  allRouteOptions={normalizedTruckSchedule.routeOptions}
+                                  isDriverScoped={drvRoutes.isDriverScoped}
+                                  accentColor={row.color || "#38bdf8"}
+                                  onChange={(nextVal) => {
+                                    updateSelectedTruckWeek((currWeek) => {
+                                      const rows = [...currWeek.rows];
+                                      if (!rows[rIdx]) return currWeek;
+                                      const nextCells = [...rows[rIdx].days];
+                                      nextCells[cIdx] = nextVal;
+                                      rows[rIdx] = { ...rows[rIdx], days: nextCells };
+                                      return { ...currWeek, rows };
+                                    });
+                                  }}
+                                  onAddRouteToDriver={(newRt) => handleAddSavedRoute(newRt, row.driver)}
+                                  onOpenDriverRoutesModal={() => {
+                                    setRouteManagerTargetDriver(row.driver);
+                                    setRouteManagerOpen(true);
+                                  }}
+                                />
                             </td>
                           ))}
                           <td className="p-1 text-center">
@@ -5882,13 +5985,16 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const rows = [...selectedSfWeek.rows];
-                                    const nextDays = [...rows[rIdx].days];
-                                    for (let i = 0; i < 5; i++) {
-                                      nextDays[i] = shiftBrush;
-                                    }
-                                    rows[rIdx] = { ...rows[rIdx], days: nextDays };
-                                    updateSelectedSfWeek({ ...selectedSfWeek, rows });
+                                    updateSelectedSfWeek((currWeek) => {
+                                      const rows = [...currWeek.rows];
+                                      if (!rows[rIdx]) return currWeek;
+                                      const nextDays = [...rows[rIdx].days];
+                                      for (let i = 0; i < 5; i++) {
+                                        nextDays[i] = shiftBrush;
+                                      }
+                                      rows[rIdx] = { ...rows[rIdx], days: nextDays };
+                                      return { ...currWeek, rows };
+                                    });
                                   }}
                                   className="h-7 px-1.5 rounded border border-primary/50 bg-primary/15 hover:bg-primary hover:text-primary-foreground text-[10px] font-bold text-primary transition-colors shrink-0"
                                   title={`Stamp "${shiftBrush || "Clear"}" across Monday–Friday for ${row.name}`}
@@ -5943,20 +6049,26 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                     isDraggingBrush={isDraggingSfBrush}
                                     onStartBrushDrag={() => setIsDraggingSfBrush(true)}
                                     onChange={(nextVal) => {
-                                      const rows = [...selectedSfWeek.rows];
-                                      const nextDays = [...rows[rIdx].days];
-                                      nextDays[cIdx] = nextVal;
-                                      rows[rIdx] = { ...rows[rIdx], days: nextDays };
-                                      updateSelectedSfWeek({ ...selectedSfWeek, rows });
+                                      updateSelectedSfWeek((currWeek) => {
+                                        const rows = [...currWeek.rows];
+                                        if (!rows[rIdx]) return currWeek;
+                                        const nextDays = [...rows[rIdx].days];
+                                        nextDays[cIdx] = nextVal;
+                                        rows[rIdx] = { ...rows[rIdx], days: nextDays };
+                                        return { ...currWeek, rows };
+                                      });
                                     }}
                                     onApplyMonFri={(shiftVal) => {
-                                      const rows = [...selectedSfWeek.rows];
-                                      const nextDays = [...rows[rIdx].days];
-                                      for (let i = 0; i < 5; i++) {
-                                        nextDays[i] = shiftVal;
-                                      }
-                                      rows[rIdx] = { ...rows[rIdx], days: nextDays };
-                                      updateSelectedSfWeek({ ...selectedSfWeek, rows });
+                                      updateSelectedSfWeek((currWeek) => {
+                                        const rows = [...currWeek.rows];
+                                        if (!rows[rIdx]) return currWeek;
+                                        const nextDays = [...rows[rIdx].days];
+                                        for (let i = 0; i < 5; i++) {
+                                          nextDays[i] = shiftVal;
+                                        }
+                                        rows[rIdx] = { ...rows[rIdx], days: nextDays };
+                                        return { ...currWeek, rows };
+                                      });
                                     }}
                                     onAddShiftToMember={(newShift) =>
                                       handleAddSavedSfShift(newShift, row.name)
@@ -6076,6 +6188,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                   <tbody>
                     {(displayState?.renewalReminders || []).map((item: any, idx: number) => {
                       const updateRow = (patch: any) => {
+                        renewalsDirtyRef.current = true;
                         const next = [...displayState.renewalReminders];
                         next[idx] = { ...next[idx], ...patch };
                         setDisplayState((prev: any) => ({ ...prev, renewalReminders: next }));

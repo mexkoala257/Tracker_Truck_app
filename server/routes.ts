@@ -1492,14 +1492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } else if (hs.vehicleAssignedBy === "auto_gps") {
             if (hs.vehicleId === best.vehicleId) {
               claimedVehIds.add(best.vehicleId);
-              if (
-                hs.autoMatchConfidence !== best.confidence ||
-                hs.autoMatchReason !== best.reason
-              ) {
-                hs.autoMatchConfidence = best.confidence;
-                hs.autoMatchReason = best.reason;
-                mutated = true;
-              }
+              hs.autoMatchConfidence = best.confidence;
+              hs.autoMatchReason = best.reason;
             } else {
               const currentScore =
                 available.find((c) => c.vehicleId === hs.vehicleId)?.score || 0;
