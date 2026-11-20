@@ -1241,13 +1241,20 @@ export async function refreshLiveNews(): Promise<boolean> {
 
 export async function syncIcsCalendarFeed(icsUrl?: string): Promise<{ ok: boolean; count: number; error?: string }> {
   const state = await getDisplayState();
-  const targetUrl = (icsUrl ?? state.settings.icsCalendarUrl ?? "").trim();
-  if (!targetUrl) {
+  const rawUrl = (icsUrl ?? state.settings.icsCalendarUrl ?? "").trim();
+  if (!rawUrl) {
     return { ok: false, count: 0, error: "No Outlook .ics URL configured" };
   }
+  const targetUrl = rawUrl.replace(/^webcals?:\/\//i, "https://");
 
   try {
-    const res = await fetch(targetUrl, { signal: AbortSignal.timeout(8000) });
+    const res = await fetch(targetUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; FleetDisplayCalendarSync/1.0)",
+        Accept: "text/calendar, text/plain, */*",
+      },
+      signal: AbortSignal.timeout(12000),
+    });
     if (!res.ok) {
       return { ok: false, count: 0, error: `HTTP ${res.status} fetching .ics feed` };
     }
@@ -1256,15 +1263,25 @@ export async function syncIcsCalendarFeed(icsUrl?: string): Promise<{ ok: boolea
     const blocks = unfolded.match(/BEGIN:VEVENT[\s\S]*?END:VEVENT/gi) || [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const horizon = new Date(now.getTime() + 45 * 24 * 60 * 60 * 1000);
+    const horizon = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
     const syncedEvents: CalendarEventItem[] = [];
+    const seenKeys = new Set<string>();
+
     for (const block of blocks) {
+      if (/^STATUS\s*:\s*CANCELLED/im.test(block)) continue;
+
       const summaryMatch = block.match(/^SUMMARY(?:;[^:]*)?:(.*)$/im);
       const dtStartMatch = block.match(/^DTSTART(?:;[^:]*)?:(.*)$/im);
       if (!summaryMatch || !dtStartMatch) continue;
 
-      const title = summaryMatch[1].replace(/\\,/g, ",").replace(/\\n/g, " ").trim();
+      const title = summaryMatch[1]
+        .replace(/\\,/g, ",")
+        .replace(/\\;/g, ";")
+        .replace(/\\n/gi, " ")
+        .trim();
+      if (!title) continue;
+
       const rawDt = dtStartMatch[1].trim();
       let eventDate: Date | null = null;
       let isAllDay = false;
@@ -1287,17 +1304,53 @@ export async function syncIcsCalendarFeed(icsUrl?: string): Promise<{ ok: boolea
       }
 
       if (!eventDate || isNaN(eventDate.getTime())) continue;
+
+      // Project yearly recurring events (birthdays, work anniversaries, annual holidays) into upcoming window
+      const rruleMatch = block.match(/^RRULE(?:;[^:]*)?:(.*)$/im);
+      if (rruleMatch && /FREQ=YEARLY/i.test(rruleMatch[1])) {
+        const untilMatch = rruleMatch[1].match(/UNTIL=(\d{8})/i);
+        if (untilMatch) {
+          const uy = Number(untilMatch[1].slice(0, 4));
+          const um = Number(untilMatch[1].slice(4, 6)) - 1;
+          const ud = Number(untilMatch[1].slice(6, 8));
+          if (new Date(uy, um, ud, 23, 59, 59) < now) continue;
+        }
+        const cand = new Date(eventDate);
+        cand.setFullYear(now.getFullYear());
+        if (cand < now) {
+          cand.setFullYear(now.getFullYear() + 1);
+        }
+        eventDate = cand;
+      }
+
       if (eventDate < now || eventDate > horizon) continue;
 
-      const dateISO = eventDate.toISOString().slice(0, 10);
+      const dateISO = isAllDay
+        ? dateToIsoLocal(eventDate)
+        : new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Chicago",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(eventDate);
+
+      const dedupeKey = `${title.toLowerCase()}|${dateISO}`;
+      if (seenKeys.has(dedupeKey)) continue;
+      seenKeys.add(dedupeKey);
+
       const dayLabel = eventDate.toLocaleDateString("en-US", {
+        timeZone: isAllDay ? undefined : "America/Chicago",
         weekday: "long",
         month: "short",
         day: "numeric",
       });
       const time = isAllDay
         ? "All Day"
-        : eventDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        : eventDate.toLocaleTimeString("en-US", {
+            timeZone: "America/Chicago",
+            hour: "numeric",
+            minute: "2-digit",
+          });
 
       syncedEvents.push({
         id: `ics-${crypto.createHash("md5").update(`${title}-${dateISO}`).digest("hex").slice(0, 8)}`,

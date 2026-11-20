@@ -749,11 +749,11 @@ while true; do
     fi
   fi
 
-  # If an unhooked DAKboard script opened dakboard/browser-init while Fleet TV is active, reclaim the screen
-  if [ ! -f /tmp/fleet-tv-stop ] && ps -eo args 2>/dev/null | grep -E "[c]hromium.*(dakboard|browser-init)" >/dev/null 2>&1; then
+  # If an unhooked DAKboard script opened browser-init.html / screenload.php while Fleet TV is active, reclaim the screen
+  if [ ! -f /tmp/fleet-tv-stop ] && ps -eo args 2>/dev/null | grep -E "[c]hromium.*(browser-init\.html|screenload\.php|dakboard\.com)" | grep -v "chromium-fleet-kiosk" >/dev/null 2>&1; then
     pkill -f "startup/browser.sh" 2>/dev/null || true
     pkill -f "startup/chromium.sh" 2>/dev/null || true
-    pkill -f chromium 2>/dev/null || true
+    pkill -f "browser-init.html" 2>/dev/null || true
     sleep 1
   fi
 
@@ -814,6 +814,7 @@ chown "$KIOSK_USER":"$KIOSK_GROUP" /var/log/fleet-tv-kiosk.log 2>/dev/null || tr
 
 systemctl daemon-reload
 systemctl enable --now tv-display-watchdog.service
+systemctl restart tv-display-watchdog.service
 
 # Immediately switch the live TV screen from DAKboard/old browser to Fleet TV without needing a reboot!
 echo "Switching live TV screen to Fleet Display now..."
