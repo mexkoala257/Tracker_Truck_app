@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, real, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, real, integer, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,11 +7,16 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("admin"), // "admin" | "staff" | "viewer"
+  displayName: text("display_name"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
+  displayName: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -32,17 +37,27 @@ export const insertVehicleSchema = createInsertSchema(vehicles).omit({
 export type InsertVehicle = z.infer<typeof insertVehicleSchema>;
 export type Vehicle = typeof vehicles.$inferSelect;
 
-export const vehicleLocations = pgTable("vehicle_locations", {
-  id: serial("id").primaryKey(),
-  vehicleId: text("vehicle_id").notNull(),
-  latitude: real("latitude").notNull(),
-  longitude: real("longitude").notNull(),
-  speed: real("speed").notNull(),
-  heading: real("heading").notNull(),
-  status: text("status").notNull(),
-  timestamp: timestamp("timestamp").notNull(),
-  receivedAt: timestamp("received_at").defaultNow().notNull(),
-});
+export const vehicleLocations = pgTable(
+  "vehicle_locations",
+  {
+    id: serial("id").primaryKey(),
+    vehicleId: text("vehicle_id").notNull(),
+    latitude: real("latitude").notNull(),
+    longitude: real("longitude").notNull(),
+    speed: real("speed").notNull(),
+    heading: real("heading").notNull(),
+    status: text("status").notNull(),
+    timestamp: timestamp("timestamp").notNull(),
+    receivedAt: timestamp("received_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    vehicleTimestampIdx: index("idx_vehicle_locations_vid_ts").on(
+      table.vehicleId,
+      table.timestamp.desc(),
+    ),
+    timestampIdx: index("idx_vehicle_locations_ts").on(table.timestamp.desc()),
+  }),
+);
 
 export const insertVehicleLocationSchema = createInsertSchema(vehicleLocations).omit({
   id: true,
@@ -82,3 +97,12 @@ export const mapHomeLocations = pgTable("map_home_locations", {
 });
 
 export type MapHomeLocation = typeof mapHomeLocations.$inferSelect;
+
+// Key-value JSONB store for TV Display Dashboard & CRM Announcements
+export const displayStore = pgTable("display_store", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type DisplayStoreRow = typeof displayStore.$inferSelect;

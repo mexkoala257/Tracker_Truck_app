@@ -4,9 +4,12 @@ import { log } from "./app";
 
 const MOTIVE_BASE_URL = "https://api.gomotive.com";
 const POLL_INTERVAL_MS = 60 * 1000;
+const FETCH_TIMEOUT_MS = 20 * 1000;
+const MAX_POLL_LOCK_MS = 90 * 1000;
 
 let pollingTimer: ReturnType<typeof setInterval> | null = null;
 let isPolling = false;
+let pollStartedAt = 0;
 
 const recentPollResults: Array<{
   timestamp: string;
@@ -18,6 +21,11 @@ const recentPollResults: Array<{
 }> = [];
 
 const MAX_POLL_RESULTS = 50;
+const lastInsertedFixByVehicle = new Map<string, string>();
+
+function buildFixSignature(ts: Date, lat: number, lon: number, status: string): string {
+  return `${ts.toISOString()}|${lat.toFixed(5)}|${lon.toFixed(5)}|${status}`;
+}
 
 export function getPollResults() {
   return recentPollResults;
@@ -69,6 +77,7 @@ async function fetchVehicleLocations(): Promise<void> {
           "X-Api-Key": apiKey,
           "Accept": "application/json",
         },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
 
       if (!response.ok) {
@@ -147,7 +156,11 @@ async function fetchVehicleLocations(): Promise<void> {
             });
           }
 
-          await storage.insertVehicleLocation(validated);
+          const fixSig = buildFixSignature(validated.timestamp, lat, lon, status);
+          if (lastInsertedFixByVehicle.get(vehicleId) !== fixSig) {
+            await storage.insertVehicleLocation(validated);
+            lastInsertedFixByVehicle.set(vehicleId, fixSig);
+          }
           totalProcessed++;
 
           if (broadcastLocationUpdate) {
@@ -217,6 +230,7 @@ async function fetchAssetLocations(): Promise<void> {
           "X-Api-Key": apiKey,
           "Accept": "application/json",
         },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
 
       if (!response.ok) {
@@ -297,7 +311,12 @@ async function fetchAssetLocations(): Promise<void> {
             });
           }
 
-          await storage.insertVehicleLocation(validated);
+          const assetKey = validated.vehicleId;
+          const fixSig = buildFixSignature(validated.timestamp, lat, lon, validated.status);
+          if (lastInsertedFixByVehicle.get(assetKey) !== fixSig) {
+            await storage.insertVehicleLocation(validated);
+            lastInsertedFixByVehicle.set(assetKey, fixSig);
+          }
           totalProcessed++;
 
           if (broadcastLocationUpdate) {
@@ -350,11 +369,15 @@ async function fetchAssetLocations(): Promise<void> {
 
 async function pollAll(): Promise<void> {
   if (isPolling) {
-    log("Previous poll still in progress - skipping", "poller");
-    return;
+    if (Date.now() - pollStartedAt < MAX_POLL_LOCK_MS) {
+      log("Previous poll still in progress - skipping", "poller");
+      return;
+    }
+    log("Previous Motive poll exceeded 90s lock timeout - forcing lock reset", "poller");
   }
 
   isPolling = true;
+  pollStartedAt = Date.now();
   try {
     log("Starting Motive API poll...", "poller");
     await fetchVehicleLocations();
@@ -362,6 +385,7 @@ async function pollAll(): Promise<void> {
     log("Motive API poll complete", "poller");
   } finally {
     isPolling = false;
+    pollStartedAt = 0;
   }
 }
 

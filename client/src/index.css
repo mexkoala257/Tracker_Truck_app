@@ -4,10 +4,17 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  /* Machined industrial corners — replaces generic rounded pill/bubble look */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.25rem;
+  --radius-2xl: 0.3125rem;
+  --radius-3xl: 0.375rem;
+
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Barlow Condensed", "IBM Plex Sans", sans-serif;
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -17,18 +24,21 @@
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
@@ -45,58 +55,190 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 }
 
-:root {
-  /* Logistics Command Center Theme - Dark & Technical */
-  --background: 222 47% 11%; /* Deep Navy/Slate */
-  --foreground: 210 40% 98%;
+/* ========================================================================== */
+/* THEME 1 (DEFAULT): INDUSTRIAL DISPATCH — Warm Matte Graphite & Signal Amber */
+/* ========================================================================== */
+:root,
+[data-theme="industrial-dispatch"] {
+  --background: 80 5% 7%;        /* #121311 Matte Warm Asphalt */
+  --foreground: 45 20% 93%;      /* #F2F0EA Warm Chalk Ink */
 
-  --card: 222 47% 11%; /* Same as bg for seamless look or slightly lighter */
-  --card-foreground: 210 40% 98%;
+  --card: 80 5% 10.5%;           /* #1B1C19 Cast Iron Surface */
+  --card-foreground: 45 20% 93%;
 
-  --popover: 222 47% 11%;
-  --popover-foreground: 210 40% 98%;
+  --popover: 80 5% 10%;
+  --popover-foreground: 45 20% 93%;
 
-  --primary: 199 89% 48%; /* Bright Cyan/Blue for active elements */
-  --primary-foreground: 222 47% 11%;
+  --primary: 37 79% 52%;         /* #E59A23 Highway Signal Amber */
+  --primary-foreground: 80 8% 7%;
+  --primary-border: hsl(37 79% 44%);
 
-  --secondary: 217 33% 17%; /* Darker slate for panels */
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 75 5% 14.5%;      /* #252623 Steel Header Band */
+  --secondary-foreground: 45 16% 90%;
+  --secondary-border: hsl(75 4% 22%);
 
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 75 4% 14%;
+  --muted-foreground: 48 6% 61%; /* #A19F96 Warm Pewter */
 
-  --accent: 199 89% 48%; /* Cyan accent */
-  --accent-foreground: 222 47% 11%;
+  --accent: 37 79% 52%;
+  --accent-foreground: 80 8% 7%;
 
-  --destructive: 0 62% 30%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 5 72% 48%;      /* #D23422 DOT Crimson */
+  --destructive-foreground: 45 20% 96%;
+  --destructive-border: hsl(5 72% 40%);
 
-  --border: 217 33% 20%;
-  --input: 217 33% 17%;
-  --ring: 199 89% 48%;
+  --button-outline: hsl(75 4% 25%);
 
-  --radius: 0.5rem;
+  --border: 75 4% 19.5%;         /* #323430 Crisp 1px Structural Rule */
+  --input: 75 5% 15%;
+  --ring: 37 79% 52%;
 
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 0.25rem;
 }
 
-/* Leaflet Map Dark Mode Override */
+/* ========================================================================== */
+/* THEME 2: CLEAN DAYLIGHT — Swiss Warm Paper, White Sheets & Carbon Ink      */
+/* ========================================================================== */
+[data-theme="daylight-paper"] {
+  --background: 42 22% 94%;      /* #F3F1EB Warm Stone Paper */
+  --foreground: 60 5% 9%;        /* #181816 Deep Carbon Ink */
+
+  --card: 0 0% 100%;             /* #FFFFFF Crisp Data Sheet */
+  --card-foreground: 60 5% 9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 60 5% 9%;
+
+  --primary: 28 84% 39%;         /* #B75B10 Industrial Rust-Amber */
+  --primary-foreground: 45 30% 98%;
+  --primary-border: hsl(28 84% 32%);
+
+  --secondary: 40 16% 89%;       /* #E8E5DC Stone Header Strip */
+  --secondary-foreground: 60 5% 12%;
+  --secondary-border: hsl(40 12% 78%);
+
+  --muted: 40 16% 90%;
+  --muted-foreground: 45 6% 36%; /* #615F57 Architectural Slate */
+
+  --accent: 28 84% 39%;
+  --accent-foreground: 45 30% 98%;
+
+  --destructive: 4 74% 44%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: hsl(4 74% 36%);
+
+  --button-outline: hsl(40 12% 72%);
+
+  --border: 40 13% 80%;          /* #D3CFC4 Crisp Paper Hairline */
+  --input: 40 15% 86%;
+  --ring: 28 84% 39%;
+}
+
+/* ========================================================================== */
+/* THEME 3: SHOP FLOOR CONTRAST — Pitch Black & Safety Yellow (50ft Read)     */
+/* ========================================================================== */
+[data-theme="shop-floor-contrast"] {
+  --background: 0 0% 2%;         /* #050505 Pure Warehouse Black */
+  --foreground: 0 0% 100%;       /* #FFFFFF Pure White */
+
+  --card: 60 4% 6.5%;            /* #111110 Stark Panel */
+  --card-foreground: 0 0% 100%;
+
+  --popover: 60 4% 7%;
+  --popover-foreground: 0 0% 100%;
+
+  --primary: 48 96% 53%;         /* #FACC15 Safety Yellow */
+  --primary-foreground: 0 0% 4%;
+  --primary-border: hsl(48 96% 45%);
+
+  --secondary: 60 3% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --secondary-border: hsl(60 3% 26%);
+
+  --muted: 60 3% 12%;
+  --muted-foreground: 50 8% 74%;
+
+  --accent: 48 96% 53%;
+  --accent-foreground: 0 0% 4%;
+
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --destructive-border: hsl(0 84% 46%);
+
+  --button-outline: hsl(60 3% 32%);
+
+  --border: 60 3% 26%;           /* #444441 High-Contrast Rule */
+  --input: 60 3% 14%;
+  --ring: 48 96% 53%;
+}
+
+/* ========================================================================== */
+/* THEME 4: RAILROAD TIMETABLE — Mineral Control Slate & Brushed Brass        */
+/* ========================================================================== */
+[data-theme="midnight-rail"] {
+  --background: 202 21% 7.5%;    /* #0F1417 Deep Mineral Slate */
+  --foreground: 42 18% 92%;      /* #EEECE6 Warm Parchment Text */
+
+  --card: 202 20% 10.8%;         /* #161D21 Control Surface */
+  --card-foreground: 42 18% 92%;
+
+  --popover: 202 20% 10.5%;
+  --popover-foreground: 42 18% 92%;
+
+  --primary: 38 62% 56%;         /* #D4A048 Brushed Brass */
+  --primary-foreground: 202 24% 8%;
+  --primary-border: hsl(38 62% 46%);
+
+  --secondary: 202 18% 15%;
+  --secondary-foreground: 42 16% 90%;
+  --secondary-border: hsl(202 15% 23%);
+
+  --muted: 202 16% 14.5%;
+  --muted-foreground: 200 10% 62%;
+
+  --accent: 38 62% 56%;
+  --accent-foreground: 202 24% 8%;
+
+  --destructive: 4 70% 48%;
+  --destructive-foreground: 0 0% 98%;
+  --destructive-border: hsl(4 70% 40%);
+
+  --button-outline: hsl(202 15% 26%);
+
+  --border: 202 15% 20.5%;
+  --input: 202 17% 15%;
+  --ring: 38 62% 56%;
+}
+
+/* Industrial Departure-Board Typography Helpers */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.035em;
+}
+
+/* Subtle architectural grid texture for main command backgrounds */
+.industrial-surface {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Leaflet Map Surface Override */
 .leaflet-container {
-  background: #0f172a !important;
-  font-family: 'JetBrains Mono', monospace;
+  background: hsl(var(--background)) !important;
+  font-family: var(--font-mono);
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: hsl(var(--background));
 }
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
-  border-radius: 4px;
+  border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
@@ -108,5 +250,27 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "tnum";
   }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.025em;
+  }
+}
+
+@keyframes tvSlideProgressScale {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.tv-slide-progress-bar {
+  transform-origin: left center;
+  will-change: transform;
+  animation-name: tvSlideProgressScale;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }

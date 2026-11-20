@@ -2,3 +2,11 @@ node_modules
 .env
 dist
 *.log
+data/
+scripts/pi-deploy/pi-inventory.json
+*.pi-inventory.json
+*.pdf
+start-tuesday-demo.ps1
+.agents/
+
+.github/

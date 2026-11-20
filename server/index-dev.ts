@@ -1,3 +1,4 @@
+process.env.NODE_ENV ??= "development";
 import fs from "node:fs";
 import { type Server } from "node:http";
 import path from "node:path";

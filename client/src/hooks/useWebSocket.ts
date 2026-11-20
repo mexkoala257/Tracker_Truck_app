@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
+import { buildAuthenticatedWsUrl, useAuth } from "@/lib/auth";
 
 interface LocationUpdate {
   type: "location_update";
@@ -17,36 +18,56 @@ interface LocationUpdate {
   };
 }
 
-export function useWebSocket(onMessage: (data: LocationUpdate["data"]) => void) {
+export interface RawWsMessage {
+  type: string;
+  data?: any;
+  payload?: any;
+}
+
+export function useWebSocket(
+  onMessage?: (data: LocationUpdate["data"]) => void,
+  onRawEvent?: (message: RawWsMessage) => void,
+) {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const reconnectTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
   const onMessageRef = useRef(onMessage);
+  const onRawEventRef = useRef(onRawEvent);
+  const { authenticated, scope } = useAuth();
 
-  // Update ref when callback changes
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
   useEffect(() => {
+    onRawEventRef.current = onRawEvent;
+  }, [onRawEvent]);
+
+  useEffect(() => {
+    if (!authenticated) {
+      setIsConnected(false);
+      return;
+    }
+
     let shouldReconnect = true;
 
     const connect = () => {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
-      
+      const wsUrl = buildAuthenticatedWsUrl();
+
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log("WebSocket connected");
         setIsConnected(true);
       };
 
       ws.current.onmessage = (event) => {
         try {
-          const message: LocationUpdate = JSON.parse(event.data);
-          if (message.type === "location_update") {
+          const message: RawWsMessage = JSON.parse(event.data);
+          if (message.type === "location_update" && message.data && onMessageRef.current) {
             onMessageRef.current(message.data);
+          }
+          if (onRawEventRef.current) {
+            onRawEventRef.current(message);
           }
         } catch (error) {
           console.error("Failed to parse WebSocket message:", error);
@@ -54,13 +75,10 @@ export function useWebSocket(onMessage: (data: LocationUpdate["data"]) => void) 
       };
 
       ws.current.onclose = () => {
-        console.log("WebSocket disconnected");
         setIsConnected(false);
-        
-        // Attempt to reconnect after 3 seconds only if we should reconnect
+
         if (shouldReconnect) {
           reconnectTimeout.current = setTimeout(() => {
-            console.log("Attempting to reconnect...");
             connect();
           }, 3000);
         }
@@ -82,7 +100,7 @@ export function useWebSocket(onMessage: (data: LocationUpdate["data"]) => void) 
         ws.current.close();
       }
     };
-  }, []); // Empty dependency array - only connect once
+  }, [authenticated, scope]);
 
   return { isConnected };
 }

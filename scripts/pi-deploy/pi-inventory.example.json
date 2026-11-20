@@ -1,0 +1,26 @@
+{
+  "serverUrl": "https://srv1205734.hstgr.cloud",
+  "defaultPort": 22,
+  "pis": {
+    "breakroom": {
+      "label": "Breakroom — 55\" 4K TV",
+      "location": "Sioux Falls Office",
+      "host": "192.168.1.101",
+      "port": 22,
+      "username": "pi",
+      "password": "CHANGE_ME",
+      "displayId": "breakroom",
+      "deviceToken": "PASTE_DEVICE_TOKEN_FROM_ADMIN_OR_RUN_PI_SYNC_TOKENS"
+    },
+    "warehouse": {
+      "label": "Warehouse — 40\" 4K TV",
+      "location": "Sioux Falls Warehouse",
+      "host": "192.168.1.102",
+      "port": 22,
+      "username": "dakboard",
+      "password": "CHANGE_ME",
+      "displayId": "warehouse",
+      "deviceToken": "PASTE_DEVICE_TOKEN_FROM_ADMIN_OR_RUN_PI_SYNC_TOKENS"
+    }
+  }
+}
