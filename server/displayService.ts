@@ -17,7 +17,11 @@ import {
   type SfScheduleState,
   normalizeSfScheduleState,
 } from "@shared/sfSchedule";
-import { parseFlexibleDateToLocal, dateToIsoLocal } from "@shared/displayUrgency";
+import {
+  parseFlexibleDateToLocal,
+  dateToIsoLocal,
+  isPastDueForMoreThanOneFullDay,
+} from "@shared/displayUrgency";
 import {
   type CustomScreenDefinition,
   type PlaylistEntry,
@@ -505,9 +509,9 @@ export const DEFAULT_DISPLAY_STATE: DisplayState = {
   renewalReminders: [
     { entity: "T01-Sonny", licenseDue: "7/26/29", medCardDue: "2/17/28", truckDotDue: "May 2027" },
     { entity: "T22-Brandon", licenseDue: "8/23/28", medCardDue: "10/16/27", truckDotDue: "August 2027" },
-    { entity: "T03-Nate", licenseDue: "1/16/30", medCardDue: "11/12/26", truckDotDue: "November 2026" },
+    { entity: "T03-Nate", licenseDue: "1/16/30", medCardDue: "", truckDotDue: "November 2026" },
     { entity: "T04-Troy", licenseDue: "8/9/30", medCardDue: "12/9/27", truckDotDue: "April 2027" },
-    { entity: "T55-Ron", licenseDue: "9/25/30", medCardDue: "11/6/26", truckDotDue: "April 2027" },
+    { entity: "T55-Ron", licenseDue: "9/25/30", medCardDue: "", truckDotDue: "April 2027" },
     { entity: "Big Betty", licenseDue: "", medCardDue: "", truckDotDue: "May 2027" },
     { entity: "T02", licenseDue: "", medCardDue: "", truckDotDue: "February 2027" },
     { entity: "T05", licenseDue: "", medCardDue: "", truckDotDue: "September 2027" },
@@ -766,8 +770,57 @@ function mergeWithDefaults(partial?: Partial<DisplayState> | null): {
   return { state, needsPersist };
 }
 
+export function purgeExpiredPastDueItems(state: DisplayState, now = new Date()): boolean {
+  let mutated = false;
+
+  if (Array.isArray(state.renewalReminders)) {
+    state.renewalReminders = state.renewalReminders.map((item) => {
+      let rowChanged = false;
+      let licenseDue = item.licenseDue || "";
+      let medCardDue = item.medCardDue || "";
+      let truckDotDue = item.truckDotDue || "";
+
+      if (licenseDue && isPastDueForMoreThanOneFullDay(licenseDue, now)) {
+        licenseDue = "";
+        rowChanged = true;
+      }
+      if (medCardDue && isPastDueForMoreThanOneFullDay(medCardDue, now)) {
+        medCardDue = "";
+        rowChanged = true;
+      }
+      if (truckDotDue && isPastDueForMoreThanOneFullDay(truckDotDue, now)) {
+        truckDotDue = "";
+        rowChanged = true;
+      }
+
+      if (rowChanged) {
+        mutated = true;
+        return { ...item, licenseDue, medCardDue, truckDotDue };
+      }
+      return item;
+    });
+  }
+
+  if (Array.isArray(state.calendarEvents) && state.calendarEvents.length > 0) {
+    const beforeLen = state.calendarEvents.length;
+    state.calendarEvents = state.calendarEvents.filter(
+      (ev) => !isPastDueForMoreThanOneFullDay(ev.dateISO, now),
+    );
+    if (state.calendarEvents.length !== beforeLen) {
+      mutated = true;
+    }
+  }
+
+  return mutated;
+}
+
 export async function getDisplayState(): Promise<DisplayState> {
-  if (cachedState) return cachedState;
+  if (cachedState) {
+    if (purgeExpiredPastDueItems(cachedState)) {
+      await saveDisplayState(cachedState);
+    }
+    return cachedState;
+  }
 
   if (hasDatabase && db) {
     try {
@@ -777,8 +830,9 @@ export async function getDisplayState(): Promise<DisplayState> {
         .where(eq(displayStore.key, DB_KEY));
       if (row && row.value) {
         const merged = mergeWithDefaults(row.value as Partial<DisplayState>);
+        const purged = purgeExpiredPastDueItems(merged.state);
         cachedState = merged.state;
-        if (merged.needsPersist) {
+        if (merged.needsPersist || purged) {
           await saveDisplayState(cachedState);
         }
         return cachedState;
@@ -790,6 +844,7 @@ export async function getDisplayState(): Promise<DisplayState> {
 
   const fromDisk = readLocalFile();
   const merged = mergeWithDefaults(fromDisk);
+  purgeExpiredPastDueItems(merged.state);
   cachedState = merged.state;
   writeLocalFile(cachedState);
 

@@ -6051,7 +6051,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                 <div>
                   <h2 className="font-bold text-base">Driver's License, Med Card & Truck DOT Renewals</h2>
                   <p className="text-xs text-muted-foreground">
-                    TV Screen 2 automatically sorts rows by soonest due date to the top (keeping all drivers visible); ≤30 days highlights urgent red and surfaces on Screen 4, ≤90 days highlights amber.
+                    TV Screen 2 sorts rows by soonest due date to the top; ≤30 days highlights red and surfaces on Screen 4, ≤90 days highlights amber. Past-due items automatically purge 1 full day after becoming past due, or click <strong>✓ Done</strong> on any due item to clear it immediately.
                   </p>
                 </div>
                 <Button
@@ -6080,9 +6080,19 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                         next[idx] = { ...next[idx], ...patch };
                         setDisplayState((prev: any) => ({ ...prev, renewalReminders: next }));
                       };
-                      const renderDueBadge = (val: string | undefined) => {
-                        const ev = evaluateRenewalDateCell(val);
-                        if (!ev.countdownLabel) return null;
+                      const markFieldDone = (field: "licenseDue" | "medCardDue" | "truckDotDue") => {
+                        const next = [...displayState.renewalReminders];
+                        next[idx] = { ...next[idx], [field]: "" };
+                        setDisplayState((prev: any) => ({ ...prev, renewalReminders: next }));
+                        saveSchedulesPayload({ renewalReminders: next });
+                      };
+                      const renderDueBadge = (
+                        val: string | undefined,
+                        field: "licenseDue" | "medCardDue" | "truckDotDue",
+                      ) => {
+                        const clean = (val || "").trim();
+                        if (!clean) return null;
+                        const ev = evaluateRenewalDateCell(clean);
                         const cls =
                           ev.status === "overdue"
                             ? "bg-rose-500/25 text-rose-200 border-rose-500/50"
@@ -6091,10 +6101,22 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                               : "bg-amber-500/15 text-amber-300 border-amber-500/40";
                         const prefix = ev.status === "overdue" ? "🚨 " : ev.status === "urgent" ? "⚠️ " : "⏳ ";
                         return (
-                          <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border ${cls}`}>
-                            {prefix}
-                            {ev.countdownLabel}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {ev.countdownLabel && (
+                              <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border ${cls}`}>
+                                {prefix}
+                                {ev.countdownLabel}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => markFieldDone(field)}
+                              title="Mark this reminder as Done and remove due alert"
+                              className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 transition-colors"
+                            >
+                              ✓ Done
+                            </button>
+                          </div>
                         );
                       };
                       return (
@@ -6114,7 +6136,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 placeholder="e.g. 7/26/29"
                                 className="h-8 text-xs"
                               />
-                              {renderDueBadge(item.licenseDue)}
+                              {renderDueBadge(item.licenseDue, "licenseDue")}
                             </div>
                           </td>
                           <td className="p-1.5">
@@ -6125,7 +6147,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 placeholder="e.g. 11/12/26"
                                 className="h-8 text-xs"
                               />
-                              {renderDueBadge(item.medCardDue)}
+                              {renderDueBadge(item.medCardDue, "medCardDue")}
                             </div>
                           </td>
                           <td className="p-1.5">
@@ -6136,7 +6158,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 placeholder="e.g. May 2027"
                                 className="h-8 text-xs"
                               />
-                              {renderDueBadge(item.truckDotDue)}
+                              {renderDueBadge(item.truckDotDue, "truckDotDue")}
                             </div>
                           </td>
                           <td className="p-1 text-center">

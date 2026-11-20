@@ -84,13 +84,13 @@ export function parseFlexibleDateToLocal(raw: string | undefined | null, now = n
     return isNaN(dt.getTime()) ? null : dt;
   }
 
-  // 3. "Month YYYY" (e.g., "November 2026", "May 2027" for Truck DOT renewals -> 1st of month)
+  // 3. "Month YYYY" (e.g., "November 2026", "May 2027" for Truck DOT renewals -> last day of month)
   const monthYearMatch = s.match(/^([a-zA-Z]+)\.?\s+(\d{4})$/);
   if (monthYearMatch) {
     const m = MONTH_NAME_MAP[monthYearMatch[1].toLowerCase()];
     const y = parseInt(monthYearMatch[2], 10);
     if (m !== undefined) {
-      return new Date(y, m, 1);
+      return new Date(y, m + 1, 0);
     }
   }
 
@@ -334,6 +334,18 @@ export interface EvaluatedRenewalCell {
   countdownLabel: string;
 }
 
+export function isPastDueForMoreThanOneFullDay(
+  dateStr: string | undefined | null,
+  now = new Date(),
+): boolean {
+  const clean = (dateStr || "").trim();
+  if (!clean) return false;
+  const parsed = parseFlexibleDateToLocal(clean, now);
+  if (!parsed) return false;
+  // Day 0 = TODAY, Day -1 = PAST DUE (1 full day visible as past due), Day <= -2 = purge
+  return diffCalendarDays(parsed, now) < -1;
+}
+
 export function evaluateRenewalDateCell(
   dateStr: string | undefined,
   now = new Date(),
@@ -347,6 +359,10 @@ export function evaluateRenewalDateCell(
     return { raw: clean, daysUntil: null, status: "ok", countdownLabel: "" };
   }
   const days = diffCalendarDays(parsed, now);
+  // Auto-purge items after 1 full day of being marked PAST DUE
+  if (days < -1) {
+    return { raw: "", daysUntil: null, status: "empty", countdownLabel: "" };
+  }
   if (days < 0) {
     return {
       raw: clean,
