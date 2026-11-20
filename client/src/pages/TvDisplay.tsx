@@ -5,7 +5,11 @@ import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaP
 import CustomScreenCanvas from "@/components/CustomScreenCanvas";
 import { useWebSocket, type RawWsMessage } from "@/hooks/useWebSocket";
 import { useAuth } from "@/lib/auth";
-import { resolveActiveTvTruckWeek } from "@shared/truckSchedule";
+import {
+  resolveActiveTvTruckWeek,
+  isDayColumnHoliday,
+  isHolidayCellValue,
+} from "@shared/truckSchedule";
 import { getActiveTvSfWeek } from "@shared/sfSchedule";
 import {
   BUILTIN_SCREENS,
@@ -998,23 +1002,30 @@ export default function TvDisplay() {
               >
                 Driver / Unit
               </th>
-              {weekBlock.days.map((d: any, i: number) => (
-                <th
-                  key={i}
-                  className={`text-center font-display font-bold uppercase tracking-wider border-r last:border-r-0 border-border ${
-                    i === todayCol ? "bg-primary/20 text-primary" : "text-secondary-foreground"
-                  }`}
-                  style={{ padding: `calc(7 * var(--u)) calc(5 * var(--u))`, fontSize: `calc(13 * var(--u))` }}
-                >
-                  <div>
-                    {d.day}
-                    {i === todayCol ? " [TODAY]" : ""}
-                  </div>
-                  <div className="font-mono font-medium opacity-75" style={{ fontSize: `calc(10 * var(--u))` }}>
-                    {(d.date || "").replace(/\/\d{4}$/, "")}
-                  </div>
-                </th>
-              ))}
+              {weekBlock.days.map((d: any, i: number) => {
+                const isColHoliday = isDayColumnHoliday(weekBlock, i);
+                return (
+                  <th
+                    key={i}
+                    className={`text-center font-display font-bold uppercase tracking-wider border-r last:border-r-0 border-border ${
+                      isColHoliday
+                        ? "bg-rose-500/25 text-rose-300"
+                        : i === todayCol
+                          ? "bg-primary/20 text-primary"
+                          : "text-secondary-foreground"
+                    }`}
+                    style={{ padding: `calc(7 * var(--u)) calc(5 * var(--u))`, fontSize: `calc(13 * var(--u))` }}
+                  >
+                    <div>
+                      {d.day}
+                      {isColHoliday ? " • HOLIDAY" : i === todayCol ? " [TODAY]" : ""}
+                    </div>
+                    <div className="font-mono font-medium opacity-75" style={{ fontSize: `calc(10 * var(--u))` }}>
+                      {(d.date || "").replace(/\/\d{4}$/, "")}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -1055,21 +1066,33 @@ export default function TvDisplay() {
                       )}
                     </div>
                   </td>
-                  {(row.days || []).map((cell: string, cIdx: number) => (
-                    <td
-                      key={cIdx}
-                      className={`text-center font-semibold leading-snug break-words border-r last:border-r-0 border-border/60 ${
-                        cIdx === todayCol ? "bg-primary/[0.08]" : ""
-                      }`}
-                      style={{
-                        color: cell ? routeColor : undefined,
-                        padding: `calc(9 * var(--u)) calc(6 * var(--u))`,
-                        fontSize: `calc(13 * var(--u))`,
-                      }}
-                    >
-                      {cell || <span className="text-muted-foreground/50">—</span>}
-                    </td>
-                  ))}
+                  {(row.days || []).map((cell: string, cIdx: number) => {
+                    const isColHoliday = isDayColumnHoliday(weekBlock, cIdx);
+                    const isCellHoliday = isColHoliday || isHolidayCellValue(cell);
+                    return (
+                      <td
+                        key={cIdx}
+                        className={`text-center font-semibold leading-snug break-words border-r last:border-r-0 border-border/60 ${
+                          isCellHoliday
+                            ? "bg-rose-500/20 text-rose-200 font-extrabold"
+                            : cIdx === todayCol
+                              ? "bg-primary/[0.08]"
+                              : ""
+                        }`}
+                        style={{
+                          color: isCellHoliday ? undefined : cell ? routeColor : undefined,
+                          padding: `calc(9 * var(--u)) calc(6 * var(--u))`,
+                          fontSize: `calc(13 * var(--u))`,
+                        }}
+                      >
+                        {isCellHoliday ? (
+                          `🎉 ${cell || "HOLIDAY"}`
+                        ) : (
+                          cell || <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}
@@ -1920,20 +1943,30 @@ export default function TvDisplay() {
                               >
                                 Team Member
                               </th>
-                              {sf.days.map((d: any, i: number) => (
-                                <th
-                                  key={i}
-                                  className={`text-center font-display font-bold uppercase tracking-wider border-r last:border-r-0 border-border ${
-                                    i === todayCol ? "bg-primary/20 text-primary" : "text-secondary-foreground"
-                                  }`}
-                                  style={{ padding: `calc(4 * var(--u))`, fontSize: `calc(11.5 * var(--u))` }}
-                                >
-                                  <div>{d.day}{i === todayCol ? " *" : ""}</div>
-                                  <div className="opacity-75 font-mono font-medium" style={{ fontSize: `calc(9 * var(--u))` }}>
-                                    {(d.date || "").replace(/\/\d{4}$/, "")}
-                                  </div>
-                                </th>
-                              ))}
+                              {sf.days.map((d: any, i: number) => {
+                                const isColHoliday = isDayColumnHoliday(sf, i);
+                                return (
+                                  <th
+                                    key={i}
+                                    className={`text-center font-display font-bold uppercase tracking-wider border-r last:border-r-0 border-border ${
+                                      isColHoliday
+                                        ? "bg-rose-500/25 text-rose-300"
+                                        : i === todayCol
+                                          ? "bg-primary/20 text-primary"
+                                          : "text-secondary-foreground"
+                                    }`}
+                                    style={{ padding: `calc(4 * var(--u))`, fontSize: `calc(11.5 * var(--u))` }}
+                                  >
+                                    <div>
+                                      {d.day}
+                                      {isColHoliday ? " • HOL" : i === todayCol ? " *" : ""}
+                                    </div>
+                                    <div className="opacity-75 font-mono font-medium" style={{ fontSize: `calc(9 * var(--u))` }}>
+                                      {(d.date || "").replace(/\/\d{4}$/, "")}
+                                    </div>
+                                  </th>
+                                );
+                              })}
                             </tr>
                           </thead>
                           <tbody>
@@ -1965,7 +1998,9 @@ export default function TvDisplay() {
                                     </span>
                                   </td>
                                   {(row.days || []).map((cell: string, cIdx: number) => {
-                                    const isOff = (cell || "").trim().toUpperCase() === "OFF";
+                                    const isColHoliday = isDayColumnHoliday(sf, cIdx);
+                                    const isCellHoliday = isColHoliday || isHolidayCellValue(cell);
+                                    const isOff = !isCellHoliday && (cell || "").trim().toUpperCase() === "OFF";
                                     const cellHotShot =
                                       sf.days?.[cIdx]?.date &&
                                       getHotShotsForScheduleHeaderDate(allHotShotRoutes, sf.days[cIdx].date).find(
@@ -1977,22 +2012,30 @@ export default function TvDisplay() {
                                         className={`text-center font-mono font-semibold border-r last:border-r-0 border-border/50 ${
                                           cellHotShot
                                             ? "bg-amber-500/15"
-                                            : cIdx === todayCol
-                                              ? "bg-primary/[0.08]"
-                                              : ""
+                                            : isCellHoliday
+                                              ? "bg-rose-500/20 text-rose-200 font-extrabold"
+                                              : cIdx === todayCol
+                                                ? "bg-primary/[0.08]"
+                                                : ""
                                         }`}
                                         style={{
                                           color: cellHotShot
                                             ? "#f59e0b"
-                                            : isOff
+                                            : isCellHoliday
                                               ? undefined
-                                              : memberColor,
+                                              : isOff
+                                                ? undefined
+                                                : memberColor,
                                           opacity: isOff && !cellHotShot ? 0.45 : 1,
                                           padding: `calc(5.5 * var(--u)) calc(4 * var(--u))`,
                                           fontSize: `calc(11 * var(--u))`,
                                         }}
                                       >
-                                        {cellHotShot ? `⚡ ${cell || "HS"}` : cell || "—"}
+                                        {cellHotShot
+                                          ? `⚡ ${cell || "HS"}`
+                                          : isCellHoliday
+                                            ? `🎉 ${cell || "HOLIDAY"}`
+                                            : cell || "—"}
                                       </td>
                                     );
                                   })}

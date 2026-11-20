@@ -7,9 +7,11 @@ import {
   parseSlashDateToMondayIso,
   shiftMondayIso,
   getMondaysForMonth,
+  isHolidayCellValue,
+  isDayColumnHoliday,
 } from "./truckSchedule";
 
-export { shiftMondayIso, getMondaysForMonth };
+export { shiftMondayIso, getMondaysForMonth, isHolidayCellValue, isDayColumnHoliday };
 
 export interface SfScheduleRow {
   name: string;
@@ -56,6 +58,7 @@ export const DEFAULT_SF_SHIFT_OPTIONS: string[] = [
   "Bomgaars",
   "OFF",
   "PTO",
+  "HOLIDAY",
   "Crafts",
   "Ice Cream",
   "Floors",
@@ -172,7 +175,14 @@ export function normalizeSfWeekBlock(
     parseSlashDateToMondayIso(block?.days?.[0]?.date) ||
     fallbackMondayIso;
 
-  const canonicalDays = buildSfWeekDays(inferredIso);
+  const canonicalDays = buildSfWeekDays(inferredIso).map((d, dIdx) => {
+    const incomingDay = block?.days?.[dIdx];
+    return {
+      ...d,
+      ...(incomingDay?.isHoliday ? { isHoliday: true } : {}),
+      ...(incomingDay?.holidayLabel ? { holidayLabel: String(incomingDay.holidayLabel) } : {}),
+    };
+  });
   const rows: SfScheduleRow[] =
     Array.isArray(block?.rows) && block!.rows.length > 0
       ? block!.rows.map((r, i) => ({
@@ -268,13 +278,19 @@ export function isClosingShift(cell: string | undefined): boolean {
   return parsed.endMin >= 18 * 60;
 }
 
-const NON_WORKING_TOKENS = new Set(["OFF", "PTO", "VACATION", "SICK", "HOLIDAY", "—", "-"]);
+const NON_WORKING_TOKENS = new Set(["OFF", "PTO", "VACATION", "SICK", "HOLIDAY", "CLOSED", "—", "-"]);
 
 export function isScheduledWorkingCell(cell: string | undefined): boolean {
   const clean = (cell || "").trim();
   if (!clean) return false;
   const upper = clean.toUpperCase();
-  if (NON_WORKING_TOKENS.has(upper) || upper.startsWith("PTO") || upper.startsWith("OFF")) {
+  if (
+    NON_WORKING_TOKENS.has(upper) ||
+    upper.startsWith("PTO") ||
+    upper.startsWith("OFF") ||
+    upper.startsWith("HOLIDAY") ||
+    upper.startsWith("CLOSED")
+  ) {
     return false;
   }
   return true;
@@ -288,7 +304,8 @@ export interface SfDayCoverageStatus {
   closers: string[];
   workingCount: number;
   isSaturday: boolean;
-  /** True when Mon–Fri, or on Saturday if at least 1 person is scheduled to work */
+  isHoliday: boolean;
+  /** True when Mon–Fri (and not a Holiday), or on Saturday if at least 1 person is scheduled to work */
   isChecked: boolean;
   missingOpeners: boolean;
   missingClosers: boolean;
@@ -300,7 +317,7 @@ export const MIN_REQUIRED_CLOSERS = 2;
 
 /**
  * Evaluates Opening (<= 7:15 AM) and Closing (>= 6:00 PM) coverage across Mon–Sat.
- * Checks Mon–Fri always, and checks Saturday only if at least one person is scheduled to work Saturday.
+ * Checks Mon–Fri (unless marked as a closed Holiday), and checks Saturday only if at least one person is scheduled to work Saturday.
  */
 export function evaluateSfWeekCoverage(week: SfWeekBlock | undefined): {
   days: SfDayCoverageStatus[];
@@ -330,7 +347,8 @@ export function evaluateSfWeekCoverage(week: SfWeekBlock | undefined): {
     }
 
     const isSaturday = dIdx === 5 || (d.day || "").toUpperCase().startsWith("SAT");
-    const isChecked = isSaturday ? workingCount > 0 : true;
+    const isHoliday = isDayColumnHoliday(week, dIdx);
+    const isChecked = isHoliday ? false : isSaturday ? workingCount > 0 : true;
     const missingOpeners = isChecked && openers.length < MIN_REQUIRED_OPENERS;
     const missingClosers = isChecked && closers.length < MIN_REQUIRED_CLOSERS;
 
@@ -342,6 +360,7 @@ export function evaluateSfWeekCoverage(week: SfWeekBlock | undefined): {
       closers,
       workingCount,
       isSaturday,
+      isHoliday,
       isChecked,
       missingOpeners,
       missingClosers,
@@ -554,10 +573,10 @@ export function getShiftsForMember(
   const uniqueAssigned = Array.from(new Set(assigned.filter(Boolean)));
   const orderedCore = priorityOrder.filter((p) => uniqueAssigned.includes(p));
   const extraAssigned = uniqueAssigned
-    .filter((x) => !priorityOrder.includes(x) && x !== "OFF" && x !== "PTO")
+    .filter((x) => !priorityOrder.includes(x) && x !== "OFF" && x !== "PTO" && x !== "HOLIDAY")
     .sort((a, b) => a.localeCompare(b));
   return {
-    options: [...orderedCore, ...extraAssigned, "OFF", "PTO"],
+    options: [...orderedCore, ...extraAssigned, "OFF", "PTO", "HOLIDAY"],
     isMemberScoped: true,
     assignedCount: orderedCore.length + extraAssigned.length,
   };

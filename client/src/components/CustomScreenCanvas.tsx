@@ -2,7 +2,11 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import TrackingMap from "@/components/TrackingMap";
 import ReturnEtaPanel, { type ReturnEtaWarehouse } from "@/components/ReturnEtaPanel";
 import { encodeQrMatrix } from "@/lib/qrSvg";
-import { resolveActiveTvTruckWeek } from "@shared/truckSchedule";
+import {
+  resolveActiveTvTruckWeek,
+  isDayColumnHoliday,
+  isHolidayCellValue,
+} from "@shared/truckSchedule";
 import {
   getActiveTvSfWeek,
   isOpeningShift,
@@ -2330,17 +2334,19 @@ export default function CustomScreenCanvas({
                     >
                       Driver / Unit
                     </th>
-                    {days.map((d: any, i: number) => (
+                    {days.map((d: any, i: number) => {
+                      const isColHoliday = isDayColumnHoliday(activeTruckWeek, i);
+                      return (
                       <th
                         key={i}
                         className={`text-center font-mono font-bold uppercase ${
-                          i === todayCol ? "bg-primary/18 text-primary" : "text-muted-foreground"
+                          isColHoliday ? "bg-rose-500/25 text-rose-300" : i === todayCol ? "bg-primary/18 text-primary" : "text-muted-foreground"
                         }`}
                         style={{ padding: `calc(5 * var(--u))`, fontSize: `calc(10.5 * var(--u))` }}
                       >
-                        {d.day} {(d.date || "").replace(/\/\d{4}$/, "")}
+                        {d.day} {(d.date || "").replace(/\/\d{4}$/, "")}{isColHoliday && <span className="ml-1 text-rose-300">??</span>}
                       </th>
-                    ))}
+                    );})}
                   </tr>
                 </thead>
                 <tbody>
@@ -2358,17 +2364,20 @@ export default function CustomScreenCanvas({
                         >
                           {r.driver}
                         </td>
-                        {(r.days || []).map((cell: string, cIdx: number) => (
+                        {(r.days || []).map((cell: string, cIdx: number) => {
+                          const isColHoliday = isDayColumnHoliday(activeTruckWeek, cIdx);
+                          const isHolidayCell = isColHoliday || isHolidayCellValue(cell);
+                          return (
                           <td
                             key={cIdx}
                             className={`text-center font-mono font-semibold truncate ${
-                              cIdx === todayCol ? "bg-primary/10 text-foreground font-bold" : "text-foreground/90"
+                              isHolidayCell ? "bg-rose-500/20 text-rose-200 font-extrabold" : cIdx === todayCol ? "bg-primary/10 text-foreground font-bold" : "text-foreground/90"
                             }`}
                             style={{ padding: `calc(5 * var(--u)) calc(4 * var(--u))`, fontSize: `calc(11.5 * var(--u))` }}
                           >
                             {cell || "—"}
                           </td>
-                        ))}
+                        );})}
                       </tr>
                     );
                   })}
@@ -2415,17 +2424,19 @@ export default function CustomScreenCanvas({
                     >
                       Staff
                     </th>
-                    {days.map((d: any, i: number) => (
+                    {days.map((d: any, i: number) => {
+                      const isColHoliday = isDayColumnHoliday(activeSfWeek, i);
+                      return (
                       <th
                         key={i}
                         className={`text-center font-mono font-bold uppercase ${
-                          i === todayCol ? "bg-primary/18 text-primary" : "text-muted-foreground"
+                          isColHoliday ? "bg-rose-500/25 text-rose-300" : i === todayCol ? "bg-primary/18 text-primary" : "text-muted-foreground"
                         }`}
                         style={{ padding: `calc(5 * var(--u)) calc(3 * var(--u))`, fontSize: `calc(10 * var(--u))` }}
                       >
-                        {d.day}
+                        {d.day}{isColHoliday && <span className="ml-1 text-rose-300">??</span>}
                       </th>
-                    ))}
+                    );})}
                   </tr>
                 </thead>
                 <tbody>
@@ -2453,7 +2464,9 @@ export default function CustomScreenCanvas({
                           </span>
                         </td>
                         {(r.days || []).map((cell: string, cIdx: number) => {
-                          const isOff = !cell || cell.toUpperCase() === "OFF";
+                          const isColHoliday = isDayColumnHoliday(activeSfWeek, cIdx);
+                          const isHolidayCell = isColHoliday || isHolidayCellValue(cell);
+                          const isOff = !isHolidayCell && (!cell || cell.toUpperCase() === "OFF");
                           const cellHotShot =
                             days[cIdx]?.date &&
                             getHotShotsForScheduleHeaderDate(allHotShotRoutes, days[cIdx].date).find(
@@ -2465,8 +2478,10 @@ export default function CustomScreenCanvas({
                               className={`text-center font-mono font-semibold truncate ${
                                 cellHotShot
                                   ? "text-amber-500 bg-amber-500/12 font-bold"
-                                  : isOff
-                                    ? "text-muted-foreground/45"
+                                  : isHolidayCell
+                                    ? "bg-rose-500/20 text-rose-200 font-extrabold"
+                                    : isOff
+                                      ? "text-muted-foreground/45"
                                     : cIdx === todayCol
                                       ? "text-primary bg-primary/10 font-bold"
                                       : "text-foreground/90"

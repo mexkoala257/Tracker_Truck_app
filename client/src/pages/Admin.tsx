@@ -145,6 +145,8 @@ import {
   createBlankWeekBlock,
   countAssignedCells,
   getRoutesForDriver,
+  isDayColumnHoliday,
+  isHolidayCellValue,
 } from "@shared/truckSchedule";
 import {
   type SfWeekBlock,
@@ -5188,14 +5190,78 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                       <th className="text-left p-2 w-28 text-xs uppercase tracking-wider text-muted-foreground">
                         Motive Unit
                       </th>
-                      {(selectedTruckWeek.days || []).map((d, dIdx) => (
-                        <th key={dIdx} className="p-2 text-center min-w-[145px]">
-                          <div className="font-bold text-xs text-foreground">{d.day}</div>
-                          <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                            {d.date}
-                          </div>
-                        </th>
-                      ))}
+                      {(selectedTruckWeek.days || []).map((d, dIdx) => {
+                        const isColHoliday = isDayColumnHoliday(selectedTruckWeek, dIdx);
+                        return (
+                          <th
+                            key={dIdx}
+                            className={`p-2 text-center min-w-[145px] transition-colors ${
+                              isColHoliday
+                                ? "bg-rose-500/20 border-x border-rose-500/45 text-rose-200"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              <span
+                                className={`font-bold text-xs ${
+                                  isColHoliday ? "text-rose-200" : "text-foreground"
+                                }`}
+                              >
+                                {d.day}
+                              </span>
+                              {isColHoliday && (
+                                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-rose-500/30 border border-rose-400/50 text-rose-100">
+                                  🎉 HOLIDAY
+                                </span>
+                              )}
+                            </div>
+                            <div
+                              className={`text-[11px] font-mono mt-0.5 ${
+                                isColHoliday ? "text-rose-200/80" : "text-muted-foreground"
+                              }`}
+                            >
+                              {d.date}
+                            </div>
+                            <div className="mt-1 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateSelectedTruckWeek((currWeek) => {
+                                    const currentlyHol = isDayColumnHoliday(currWeek, dIdx);
+                                    const nextDaysHeader = currWeek.days.map((dayObj, i) =>
+                                      i === dIdx
+                                        ? { ...dayObj, isHoliday: !currentlyHol }
+                                        : dayObj,
+                                    );
+                                    const nextRows = currWeek.rows.map((r) => {
+                                      const rowCells = [...r.days];
+                                      if (!currentlyHol) {
+                                        rowCells[dIdx] = "HOLIDAY";
+                                      } else if (isHolidayCellValue(rowCells[dIdx])) {
+                                        rowCells[dIdx] = "";
+                                      }
+                                      return { ...r, days: rowCells };
+                                    });
+                                    return { ...currWeek, days: nextDaysHeader, rows: nextRows };
+                                  });
+                                }}
+                                className={`px-2 py-0.5 rounded border text-[10px] font-bold transition-colors ${
+                                  isColHoliday
+                                    ? "bg-rose-500 text-white border-rose-400 hover:bg-rose-600"
+                                    : "bg-secondary/50 hover:bg-rose-500/20 text-muted-foreground hover:text-rose-200 border-border/70 hover:border-rose-500/40"
+                                }`}
+                                title={
+                                  isColHoliday
+                                    ? `Clear Holiday theme on ${d.day}`
+                                    : `Mark entire ${d.day} column as a closed Holiday`
+                                }
+                              >
+                                {isColHoliday ? "🎉 Holiday: ON" : "🎉 Holiday"}
+                              </button>
+                            </div>
+                          </th>
+                        );
+                      })}
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -5296,8 +5362,17 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                               className="h-8 text-xs font-mono"
                             />
                           </td>
-                          {(row.days || []).map((val: string, cIdx: number) => (
-                            <td key={cIdx} className="p-1.5">
+                          {(row.days || []).map((val: string, cIdx: number) => {
+                            const isColHoliday = isDayColumnHoliday(selectedTruckWeek, cIdx);
+                            return (
+                              <td
+                                key={cIdx}
+                                className={`p-1.5 transition-colors ${
+                                  isColHoliday
+                                    ? "bg-rose-500/15 border-x border-rose-500/35"
+                                    : ""
+                                }`}
+                              >
                                 <RouteCellPicker
                                   value={val}
                                   driverName={row.driver}
@@ -5305,6 +5380,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                   allRouteOptions={normalizedTruckSchedule.routeOptions}
                                   isDriverScoped={drvRoutes.isDriverScoped}
                                   accentColor={row.color || "#38bdf8"}
+                                  isHolidayColumn={isColHoliday}
                                   onChange={(nextVal) => {
                                     updateSelectedTruckWeek((currWeek) => {
                                       const rows = [...currWeek.rows];
@@ -5321,8 +5397,9 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                     setRouteManagerOpen(true);
                                   }}
                                 />
-                            </td>
-                          ))}
+                              </td>
+                            );
+                          })}
                           <td className="p-1 text-center">
                             <Button
                               variant="ghost"
@@ -5765,22 +5842,29 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                     Quick-Fill Brush:
                   </span>
 
-                  {["7:15-4:15", "8:00-5:00", "8:30-5:30", "9:00-6:00", "Bomgaars", "OFF", "PTO"].map(
+                  {["7:15-4:15", "8:00-5:00", "8:30-5:30", "9:00-6:00", "Bomgaars", "OFF", "PTO", "HOLIDAY"].map(
                     (preset) => {
                       const active = shiftBrush === preset;
                       const isOp = isOpeningShift(preset);
                       const isCl = isClosingShift(preset);
+                      const isHol = preset === "HOLIDAY";
                       return (
                         <Button
                           key={preset}
                           size="sm"
                           variant={active ? "default" : "outline"}
-                          className="h-7 text-xs gap-1"
+                          className={`h-7 text-xs gap-1 ${
+                            isHol && !active
+                              ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25"
+                              : isHol && active
+                                ? "bg-rose-600 hover:bg-rose-500 text-white border-rose-400"
+                                : ""
+                          }`}
                           onClick={() => setShiftBrush((prev) => (prev === preset ? null : preset))}
                         >
                           {isOp && <Sun className="w-3 h-3 text-sky-400" />}
                           {isCl && <Moon className="w-3 h-3 text-indigo-400" />}
-                          <span>{preset}</span>
+                          <span>{isHol ? "🎉 HOLIDAY" : preset}</span>
                         </Button>
                       );
                     },
@@ -5830,16 +5914,27 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                       </th>
                       {(selectedSfWeek.days || []).map((d, dIdx) => {
                         const cov = sfWeekCoverage.days[dIdx];
+                        const isColHoliday = Boolean(cov?.isHoliday || isDayColumnHoliday(selectedSfWeek, dIdx));
                         return (
                           <th
                             key={dIdx}
                             className={`p-2 text-center min-w-[132px] transition-colors ${
-                              cov?.hasWarning ? "bg-amber-500/10" : ""
+                              isColHoliday
+                                ? "bg-rose-500/20 border-x border-rose-500/45 text-rose-200"
+                                : cov?.hasWarning
+                                  ? "bg-amber-500/10"
+                                  : ""
                             }`}
                           >
                             <div className="flex items-center justify-center gap-1">
-                              <span className="font-bold text-xs text-foreground">{d.day}</span>
-                              {cov?.hasWarning && (
+                              <span
+                                className={`font-bold text-xs ${
+                                  isColHoliday ? "text-rose-200" : "text-foreground"
+                                }`}
+                              >
+                                {d.day}
+                              </span>
+                              {!isColHoliday && cov?.hasWarning && (
                                 <span
                                   title="Understaffed on Opening or Closing shift"
                                   className="inline-flex shrink-0"
@@ -5848,14 +5943,22 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] font-mono text-muted-foreground mt-0.5">
+                            <div
+                              className={`text-[11px] font-mono mt-0.5 ${
+                                isColHoliday ? "text-rose-200/80" : "text-muted-foreground"
+                              }`}
+                            >
                               {d.date}
                             </div>
 
                             {/* Live Opening / Closing Coverage Pills per Day Column */}
                             {cov && (
                               <div className="flex items-center justify-center gap-1 mt-1.5 flex-wrap">
-                                {cov.isSaturday && !cov.isChecked ? (
+                                {isColHoliday ? (
+                                  <span className="px-2 py-0.5 rounded bg-rose-500/30 border border-rose-400/50 text-[10px] font-extrabold text-rose-100">
+                                    🎉 HOLIDAY • CLOSED
+                                  </span>
+                                ) : cov.isSaturday && !cov.isChecked ? (
                                   <span className="px-1.5 py-0.5 rounded bg-secondary/70 text-[10px] font-mono text-muted-foreground">
                                     Closed / OFF
                                   </span>
@@ -5896,24 +5999,65 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                               </div>
                             )}
 
-                            {/* Mass-fill entire day column when Quick-Fill Brush is active */}
-                            {shiftBrush !== null && (
+                            {/* 1-Click Holiday Column Theme Toggle */}
+                            <div className="mt-1.5 flex items-center justify-center gap-1 flex-wrap">
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const rows = selectedSfWeek.rows.map((r) => {
-                                    const nextDays = [...r.days];
-                                    nextDays[dIdx] = shiftBrush;
-                                    return { ...r, days: nextDays };
+                                  updateSelectedSfWeek((currWeek) => {
+                                    const currentlyHol = isDayColumnHoliday(currWeek, dIdx);
+                                    const nextDaysHeader = currWeek.days.map((dayObj, i) =>
+                                      i === dIdx
+                                        ? { ...dayObj, isHoliday: !currentlyHol }
+                                        : dayObj,
+                                    );
+                                    const nextRows = currWeek.rows.map((r) => {
+                                      const rowCells = [...r.days];
+                                      if (!currentlyHol) {
+                                        rowCells[dIdx] = "HOLIDAY";
+                                      } else if (isHolidayCellValue(rowCells[dIdx])) {
+                                        rowCells[dIdx] = dIdx === 5 ? "OFF" : "";
+                                      }
+                                      return { ...r, days: rowCells };
+                                    });
+                                    return { ...currWeek, days: nextDaysHeader, rows: nextRows };
                                   });
-                                  updateSelectedSfWeek({ ...selectedSfWeek, rows });
                                 }}
-                                className="mt-1 px-1.5 py-0.5 rounded bg-primary/20 hover:bg-primary hover:text-primary-foreground text-primary text-[9px] font-bold transition-colors"
-                                title={`Stamp "${shiftBrush || "Clear"}" down entire ${d.day} column`}
+                                className={`px-2 py-0.5 rounded border text-[10px] font-bold transition-colors ${
+                                  isColHoliday
+                                    ? "bg-rose-500 text-white border-rose-400 hover:bg-rose-600"
+                                    : "bg-secondary/50 hover:bg-rose-500/20 text-muted-foreground hover:text-rose-200 border-border/70 hover:border-rose-500/40"
+                                }`}
+                                title={
+                                  isColHoliday
+                                    ? `Clear Holiday column theme on ${d.day}`
+                                    : `Mark entire ${d.day} column as a closed Holiday (applies Holiday Color Theme)`
+                                }
                               >
-                                Fill {d.day}
+                                {isColHoliday ? "🎉 Holiday: ON" : "🎉 Holiday"}
                               </button>
-                            )}
+
+                              {/* Mass-fill entire day column when Quick-Fill Brush is active */}
+                              {shiftBrush !== null && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateSelectedSfWeek((currWeek) => {
+                                      const rows = currWeek.rows.map((r) => {
+                                        const nextDays = [...r.days];
+                                        nextDays[dIdx] = shiftBrush;
+                                        return { ...r, days: nextDays };
+                                      });
+                                      return { ...currWeek, rows };
+                                    });
+                                  }}
+                                  className="px-1.5 py-0.5 rounded bg-primary/20 hover:bg-primary hover:text-primary-foreground text-primary text-[9px] font-bold transition-colors"
+                                  title={`Stamp "${shiftBrush || "Clear"}" down entire ${d.day} column`}
+                                >
+                                  Fill {d.day}
+                                </button>
+                              )}
+                            </div>
                           </th>
                         );
                       })}
@@ -6030,11 +6174,19 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 hs.deliveryDateISO === cellIso &&
                                 doesHotShotDriverMatchMember(hs.driverName, row.name, hs.originHub),
                             );
+                            const isColHoliday = Boolean(
+                              sfWeekCoverage.days[cIdx]?.isHoliday ||
+                                isDayColumnHoliday(selectedSfWeek, cIdx),
+                            );
                             return (
                               <td
                                 key={cIdx}
-                                className={`p-1.5 align-top ${
-                                  sfWeekCoverage.days[cIdx]?.hasWarning ? "bg-amber-500/[0.04]" : ""
+                                className={`p-1.5 align-top transition-colors ${
+                                  isColHoliday
+                                    ? "bg-rose-500/15 border-x border-rose-500/35"
+                                    : sfWeekCoverage.days[cIdx]?.hasWarning
+                                      ? "bg-amber-500/[0.04]"
+                                      : ""
                                 }`}
                               >
                                 <div className="space-y-1">
@@ -6045,6 +6197,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                     allShiftOptions={normalizedSfSchedule.shiftOptions}
                                     isMemberScoped={memberShiftMeta.isMemberScoped}
                                     accentColor={row.color || "#93c5fd"}
+                                    isHolidayColumn={isColHoliday}
                                     activeBrush={shiftBrush}
                                     isDraggingBrush={isDraggingSfBrush}
                                     onStartBrushDrag={() => setIsDraggingSfBrush(true)}

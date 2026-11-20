@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Plus, Search, Settings2, X } from "lucide-react";
+import { Check, ChevronDown, Pencil, Plus, Search, Settings2, X } from "lucide-react";
+import { isHolidayCellValue } from "@shared/truckSchedule";
 
 interface RouteCellPickerProps {
   value: string;
@@ -9,6 +10,7 @@ interface RouteCellPickerProps {
   allRouteOptions: string[];
   isDriverScoped: boolean;
   accentColor?: string;
+  isHolidayColumn?: boolean;
   onChange: (nextValue: string) => void;
   onAddRouteToDriver?: (newRoute: string) => void;
   onOpenDriverRoutesModal?: () => void;
@@ -21,6 +23,7 @@ export default function RouteCellPicker({
   allRouteOptions,
   isDriverScoped,
   accentColor,
+  isHolidayColumn = false,
   onChange,
   onAddRouteToDriver,
   onOpenDriverRoutesModal,
@@ -28,9 +31,12 @@ export default function RouteCellPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showAllFleetRoutes, setShowAllFleetRoutes] = useState(false);
+  const [customEntryOpen, setCustomEntryOpen] = useState(false);
+  const [customEntryText, setCustomEntryText] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const customInputRef = useRef<HTMLInputElement | null>(null);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number }>({
     top: 0,
     left: 0,
@@ -124,8 +130,10 @@ export default function RouteCellPicker({
     setShowAllFleetRoutes(false);
   };
 
+  const isHoliday = isHolidayColumn || isHolidayCellValue(value);
   const isOffOrPto =
-    value.trim().toUpperCase() === "OFF" || value.trim().toUpperCase().startsWith("PTO");
+    !isHoliday &&
+    (value.trim().toUpperCase() === "OFF" || value.trim().toUpperCase().startsWith("PTO"));
 
   return (
     <>
@@ -136,23 +144,31 @@ export default function RouteCellPicker({
           setOpen((prev) => !prev);
           setQuery("");
           setShowAllFleetRoutes(false);
+          setCustomEntryOpen(false);
+          setCustomEntryText("");
         }}
         className={`w-full min-h-8 px-2 py-1 rounded-md border text-xs flex items-center justify-between gap-1.5 transition-colors text-left ${
           open
             ? "border-primary ring-1 ring-primary/40 bg-secondary/50"
-            : value
-              ? isOffOrPto
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/50"
-                : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
-              : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
+            : isHoliday
+              ? "border-rose-500/60 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 font-extrabold"
+              : value
+                ? isOffOrPto
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400/50"
+                  : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
+                : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
         }`}
         title={value || `Select route for ${driverName}`}
       >
         <span
           className="truncate leading-tight"
-          style={value && !isOffOrPto && accentColor ? { color: accentColor } : undefined}
+          style={
+            value && !isOffOrPto && !isHoliday && accentColor
+              ? { color: accentColor }
+              : undefined
+          }
         >
-          {value || "— Select —"}
+          {isHoliday ? `🎉 ${value || "HOLIDAY"}` : value || "— Select —"}
         </span>
         <ChevronDown className="w-3.5 h-3.5 opacity-60 shrink-0" />
       </button>
@@ -219,6 +235,72 @@ export default function RouteCellPicker({
                   <X className="w-3.5 h-3.5 shrink-0" />
                   <span>Clear cell (—)</span>
                 </button>
+              )}
+
+              {/* Explicit One-Off Custom Route Option */}
+              {!trimmedQuery && (
+                <div className="border-b border-border/60 pb-1.5 mb-1">
+                  {!customEntryOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomEntryOpen(true);
+                        setCustomEntryText(
+                          value && !driverRouteOptions.includes(value) && !allRouteOptions.includes(value)
+                            ? value
+                            : "",
+                        );
+                        setTimeout(() => customInputRef.current?.focus(), 20);
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs font-semibold text-sky-400 hover:bg-sky-500/15 transition-colors text-left"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <Pencil className="w-3.5 h-3.5 shrink-0" />
+                        <span>+ Custom Route (One-Off)...</span>
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="p-2 rounded-lg border border-sky-500/40 bg-sky-500/10 space-y-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-sky-300 flex items-center justify-between">
+                        <span>One-Off Custom Route</span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomEntryOpen(false)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <input
+                          ref={customInputRef}
+                          type="text"
+                          value={customEntryText}
+                          onChange={(e) => setCustomEntryText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && customEntryText.trim()) {
+                              e.preventDefault();
+                              handleSelect(customEntryText.trim());
+                            } else if (e.key === "Escape") {
+                              e.stopPropagation();
+                              setCustomEntryOpen(false);
+                            }
+                          }}
+                          placeholder="Type custom route..."
+                          className="flex-1 h-7 px-2 rounded border border-border bg-background text-xs text-foreground outline-none focus:border-sky-400"
+                        />
+                        <button
+                          type="button"
+                          disabled={!customEntryText.trim()}
+                          onClick={() => customEntryText.trim() && handleSelect(customEntryText.trim())}
+                          className="h-7 px-2.5 rounded bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-black font-bold text-xs shrink-0"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Custom One-Off + Assign to This Driver Actions */}

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Moon, Plus, Search, Settings2, Sun, X } from "lucide-react";
-import { isClosingShift, isOpeningShift } from "@shared/sfSchedule";
+import { Check, ChevronDown, Moon, Pencil, Plus, Search, Settings2, Sun, X } from "lucide-react";
+import { isClosingShift, isHolidayCellValue, isOpeningShift } from "@shared/sfSchedule";
 
 interface SfShiftCellPickerProps {
   value: string;
@@ -10,6 +10,7 @@ interface SfShiftCellPickerProps {
   allShiftOptions: string[];
   isMemberScoped: boolean;
   accentColor?: string;
+  isHolidayColumn?: boolean;
   /** `null` = Dropdown Mode; `string` (including `""` for Clear/Eraser) = Quick-Fill Brush Mode */
   activeBrush: string | null;
   isDraggingBrush?: boolean;
@@ -27,6 +28,7 @@ export default function SfShiftCellPicker({
   allShiftOptions,
   isMemberScoped,
   accentColor,
+  isHolidayColumn = false,
   activeBrush,
   isDraggingBrush = false,
   onStartBrushDrag,
@@ -38,9 +40,12 @@ export default function SfShiftCellPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showAllShifts, setShowAllShifts] = useState(false);
+  const [customEntryOpen, setCustomEntryOpen] = useState(false);
+  const [customEntryText, setCustomEntryText] = useState("");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const customInputRef = useRef<HTMLInputElement | null>(null);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number }>({
     top: 0,
     left: 0,
@@ -147,7 +152,8 @@ export default function SfShiftCellPicker({
   };
 
   const upperVal = value.trim().toUpperCase();
-  const isOffOrPto = upperVal === "OFF" || upperVal.startsWith("PTO");
+  const isHoliday = isHolidayColumn || isHolidayCellValue(value);
+  const isOffOrPto = !isHoliday && (upperVal === "OFF" || upperVal.startsWith("PTO"));
   const opener = isOpeningShift(value);
   const closer = isClosingShift(value);
   const isBrushActive = activeBrush !== null;
@@ -195,17 +201,21 @@ export default function SfShiftCellPicker({
           setOpen((prev) => !prev);
           setQuery("");
           setShowAllShifts(false);
+          setCustomEntryOpen(false);
+          setCustomEntryText("");
         }}
         className={`w-full min-h-8 px-2 py-1 rounded-md border text-xs flex items-center justify-between gap-1 transition-colors text-left select-none ${
           isBrushActive
             ? "cursor-cell ring-1 ring-primary/35 hover:ring-2 hover:ring-primary hover:bg-primary/10 border-primary/40 bg-secondary/25"
             : open
               ? "border-primary ring-1 ring-primary/40 bg-secondary/50"
-              : value
-                ? isOffOrPto
-                  ? "border-slate-600/40 bg-slate-800/30 text-slate-400 hover:border-slate-500/60"
-                  : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
-                : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
+              : isHoliday
+                ? "border-rose-500/60 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 font-extrabold"
+                : value
+                  ? isOffOrPto
+                    ? "border-slate-600/40 bg-slate-800/30 text-slate-400 hover:border-slate-500/60"
+                    : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
+                  : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
         }`}
         title={
           isBrushActive
@@ -215,9 +225,13 @@ export default function SfShiftCellPicker({
       >
         <span
           className="truncate leading-tight"
-          style={value && !isOffOrPto && accentColor ? { color: accentColor } : undefined}
+          style={
+            value && !isOffOrPto && !isHoliday && accentColor
+              ? { color: accentColor }
+              : undefined
+          }
         >
-          {value || "— Select —"}
+          {isHoliday ? `🎉 ${value || "HOLIDAY"}` : value || "— Select —"}
         </span>
         <span className="inline-flex items-center gap-1 shrink-0">
           {opener && (
@@ -297,6 +311,84 @@ export default function SfShiftCellPicker({
                   <X className="w-3.5 h-3.5 shrink-0" />
                   <span>Clear cell (—)</span>
                 </button>
+              )}
+
+              {/* Explicit One-Off Custom Shift Option */}
+              {!trimmedQuery && (
+                <div className="border-b border-border/60 pb-1.5 mb-1">
+                  {!customEntryOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomEntryOpen(true);
+                        setCustomEntryText(
+                          value && !memberShiftOptions.includes(value) && !allShiftOptions.includes(value)
+                            ? value
+                            : "",
+                        );
+                        setTimeout(() => customInputRef.current?.focus(), 20);
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs font-semibold text-sky-400 hover:bg-sky-500/15 transition-colors text-left"
+                    >
+                      <span className="inline-flex items-center gap-1.5">
+                        <Pencil className="w-3.5 h-3.5 shrink-0" />
+                        <span>+ Custom Shift (One-Off)...</span>
+                      </span>
+                      <span className="text-[10px] font-normal text-muted-foreground">e.g. 7:30-2:00</span>
+                    </button>
+                  ) : (
+                    <div className="p-2 rounded-lg border border-sky-500/40 bg-sky-500/10 space-y-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-sky-300 flex items-center justify-between">
+                        <span>One-Off Custom Shift</span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomEntryOpen(false)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <input
+                          ref={customInputRef}
+                          type="text"
+                          value={customEntryText}
+                          onChange={(e) => setCustomEntryText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && customEntryText.trim()) {
+                              e.preventDefault();
+                              handleSelect(customEntryText.trim());
+                            } else if (e.key === "Escape") {
+                              e.stopPropagation();
+                              setCustomEntryOpen(false);
+                            }
+                          }}
+                          placeholder="e.g. 7:30-2:00 or Half Day"
+                          className="flex-1 h-7 px-2 rounded border border-border bg-background text-xs text-foreground outline-none focus:border-sky-400"
+                        />
+                        <button
+                          type="button"
+                          disabled={!customEntryText.trim()}
+                          onClick={() => customEntryText.trim() && handleSelect(customEntryText.trim())}
+                          className="h-7 px-2.5 rounded bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-black font-bold text-xs shrink-0"
+                        >
+                          Apply
+                        </button>
+                        {onApplyMonFri && (
+                          <button
+                            type="button"
+                            disabled={!customEntryText.trim()}
+                            onClick={() => customEntryText.trim() && handleSelectMonFri(customEntryText.trim())}
+                            className="h-7 px-2 rounded border border-border bg-secondary hover:bg-primary hover:text-primary-foreground disabled:opacity-40 font-bold text-[10px] shrink-0"
+                            title="Apply this custom shift to Monday–Friday"
+                          >
+                            M–F
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Custom One-Off + Assign to Member Actions */}

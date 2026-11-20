@@ -1,6 +1,43 @@
 export interface ScheduleDayHeader {
   day: string;
   date: string;
+  /** True when the entire day column is marked as a company Holiday / Closed day */
+  isHoliday?: boolean;
+  /** Optional custom label for the holiday (e.g. "HOLIDAY", "THANKSGIVING", "CLOSED") */
+  holidayLabel?: string;
+}
+
+export function isHolidayCellValue(val?: string | null): boolean {
+  const clean = (val || "").trim().toUpperCase();
+  if (!clean) return false;
+  return (
+    clean === "HOLIDAY" ||
+    clean === "CLOSED" ||
+    clean.startsWith("HOLIDAY ") ||
+    clean.startsWith("HOLIDAY-") ||
+    clean.startsWith("HOLIDAY:")
+  );
+}
+
+export function isDayColumnHoliday(
+  week: { days?: ScheduleDayHeader[]; rows?: Array<{ days?: string[] }> } | undefined | null,
+  colIdx: number,
+): boolean {
+  if (!week) return false;
+  if (week.days?.[colIdx]?.isHoliday) return true;
+  const rows = week.rows || [];
+  if (rows.length === 0) return false;
+  let holidayCount = 0;
+  let nonEmptyCount = 0;
+  for (const r of rows) {
+    const val = (r.days?.[colIdx] || "").trim();
+    if (!val) continue;
+    nonEmptyCount++;
+    if (isHolidayCellValue(val)) {
+      holidayCount++;
+    }
+  }
+  return nonEmptyCount > 0 && holidayCount === nonEmptyCount;
 }
 
 export interface TruckScheduleRow {
@@ -42,6 +79,7 @@ export interface TruckScheduleState {
 export const DEFAULT_ROUTE_OPTIONS: string[] = [
   "OFF",
   "PTO",
+  "HOLIDAY",
   "WHS",
   "SF",
   "ABERDEEN",
@@ -290,7 +328,11 @@ export function normalizeTruckScheduleState(raw: any, now = new Date()): TruckSc
         weeks[isoKey] = {
           weekStartISO: isoKey,
           label: block.label || `Week of ${expectedDays[0].date} – ${expectedDays[4].date}`,
-          days: Array.isArray(block.days) && block.days.length === 5 ? block.days : expectedDays,
+          days: expectedDays.map((d, i) => ({
+            ...d,
+            isHoliday: Boolean(block?.days?.[i]?.isHoliday),
+            ...(block?.days?.[i]?.holidayLabel ? { holidayLabel: String(block.days[i].holidayLabel) } : {}),
+          })),
           rows: block.rows.map((r: any) => ({
             driver: String(r.driver || ""),
             vehicleKey: String(r.vehicleKey || ""),
@@ -363,7 +405,7 @@ export function normalizeTruckScheduleState(raw: any, now = new Date()): TruckSc
       }
     }
   } else {
-    const specialTop = ["OFF", "PTO", "WHS", "SF"];
+    const specialTop = ["OFF", "PTO", "HOLIDAY", "WHS", "SF"];
     const dynamicSet = new Set<string>(DEFAULT_ROUTE_OPTIONS);
     for (const wk of Object.values(weeks)) {
       for (const r of wk.rows) {
@@ -458,7 +500,7 @@ export function getRoutesForDriver(
       ordered.push(r);
     }
   }
-  for (const statusOpt of ["OFF", "PTO"]) {
+  for (const statusOpt of ["OFF", "PTO", "HOLIDAY"]) {
     if (!seen.has(statusOpt)) {
       seen.add(statusOpt);
       ordered.push(statusOpt);

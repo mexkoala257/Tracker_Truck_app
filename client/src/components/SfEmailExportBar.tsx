@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import type { SfWeekBlock } from "@shared/sfSchedule";
+import { isDayColumnHoliday, isHolidayCellValue, type SfWeekBlock } from "@shared/sfSchedule";
 
 interface SfEmailExportBarProps {
   week: SfWeekBlock;
@@ -36,6 +36,7 @@ function formatEmailShiftText(raw: string | undefined): string {
 function getSpecialtyColor(token: string): string | null {
   const lower = token.trim().toLowerCase();
   if (!lower) return null;
+  if (isHolidayCellValue(token)) return "#F8CECC";
   if (lower === "bomgaars") return "#ED7D31";
   if (lower === "crafts") return "#F8CBAD";
   if (lower === "ice cream") return "#75C9F0";
@@ -60,7 +61,11 @@ function resolveCellBackground(
   rowIndex: number,
   dayIndex: number,
   rowDays: string[],
+  isHolidayCol = false,
 ): string {
+  if (isHolidayCol || isHolidayCellValue(cellValue)) {
+    return rowIndex % 2 === 0 ? "#F8CECC" : "#F4B8B4";
+  }
   const direct = getSpecialtyColor(cellValue);
   if (direct) return direct;
 
@@ -104,22 +109,27 @@ export function buildSfEmailHtml(week: SfWeekBlock): string {
 
   const dateCellsHtml = Array.from({ length: 6 }, (_, i) => {
     const dt = escapeHtml(days[i]?.date || "");
-    return `<td bgcolor="#92D050" align="center" style="${borderCss}${fontCss}background-color:#92D050;font-size:15px;padding:4px 10px;white-space:nowrap;">${dt}</td>`;
+    const hol = isDayColumnHoliday(week, i);
+    const bg = hol ? "#F4B084" : "#92D050";
+    return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:15px;padding:4px 10px;white-space:nowrap;">${dt}</td>`;
   }).join("");
 
   const dayNameCellsHtml = Array.from({ length: 6 }, (_, i) => {
     const fullDay = FULL_DAY_NAMES[i] || escapeHtml(days[i]?.day || "");
-    return `<td bgcolor="#D9D9D9" align="center" style="${borderCss}${fontCss}background-color:#D9D9D9;font-size:14px;padding:4px 10px;white-space:nowrap;">${fullDay}</td>`;
+    const hol = isDayColumnHoliday(week, i);
+    const bg = hol ? "#F4B084" : "#D9D9D9";
+    return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:14px;${hol ? "font-weight:bold;" : ""}padding:4px 10px;white-space:nowrap;">${fullDay}${hol ? " (HOLIDAY)" : ""}</td>`;
   }).join("");
 
   const staffRowsHtml = rows
     .map((row, rIdx) => {
       const nameBg = rIdx % 2 === 0 ? "#BFBFBF" : "#D9D9D9";
       const cells = Array.from({ length: 6 }, (_, dIdx) => {
-        const rawCell = row.days?.[dIdx] || "";
+        const hol = isDayColumnHoliday(week, dIdx);
+        const rawCell = row.days?.[dIdx] || (hol ? "HOLIDAY" : "");
         const formatted = escapeHtml(formatEmailShiftText(rawCell));
-        const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || []);
-        return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:13px;padding:3px 10px;white-space:nowrap;">${formatted}</td>`;
+        const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol);
+        return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:13px;${hol || isHolidayCellValue(rawCell) ? "font-weight:bold;color:#7F1D1D;" : ""}padding:3px 10px;white-space:nowrap;">${formatted}</td>`;
       }).join("");
 
       return `<tr>
@@ -229,9 +239,10 @@ async function renderSfSchedulePngBlob(week: SfWeekBlock): Promise<Blob> {
 
   for (let i = 0; i < 6; i++) {
     const x = nameColW + i * dayColW;
-    drawRectWithBorder(x, curY, dayColW, dateRowH, "#92D050");
+    const hol = isDayColumnHoliday(week, i);
+    drawRectWithBorder(x, curY, dayColW, dateRowH, hol ? "#F4B084" : "#92D050");
     ctx.fillStyle = "#000000";
-    ctx.font = `400 15px ${fontFamily}`;
+    ctx.font = `${hol ? "700" : "400"} 15px ${fontFamily}`;
     ctx.textAlign = "center";
     ctx.fillText(week.days?.[i]?.date || "", x + dayColW / 2, curY + dateRowH / 2 + 0.5);
   }
@@ -248,9 +259,10 @@ async function renderSfSchedulePngBlob(week: SfWeekBlock): Promise<Blob> {
 
   for (let i = 0; i < 6; i++) {
     const x = nameColW + i * dayColW;
-    drawRectWithBorder(x, curY, dayColW, dayRowH, "#D9D9D9");
+    const hol = isDayColumnHoliday(week, i);
+    drawRectWithBorder(x, curY, dayColW, dayRowH, hol ? "#F4B084" : "#D9D9D9");
     ctx.fillStyle = "#000000";
-    ctx.font = `400 14px ${fontFamily}`;
+    ctx.font = `${hol ? "700" : "400"} 14px ${fontFamily}`;
     ctx.textAlign = "center";
     ctx.fillText(FULL_DAY_NAMES[i], x + dayColW / 2, curY + dayRowH / 2 + 0.5);
   }
@@ -268,11 +280,12 @@ async function renderSfSchedulePngBlob(week: SfWeekBlock): Promise<Blob> {
 
     for (let dIdx = 0; dIdx < 6; dIdx++) {
       const x = nameColW + dIdx * dayColW;
-      const rawCell = row.days?.[dIdx] || "";
-      const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || []);
+      const hol = isDayColumnHoliday(week, dIdx);
+      const rawCell = row.days?.[dIdx] || (hol ? "HOLIDAY" : "");
+      const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol);
       drawRectWithBorder(x, curY, dayColW, staffRowH, bg);
-      ctx.fillStyle = "#000000";
-      ctx.font = `400 13px ${fontFamily}`;
+      ctx.fillStyle = hol || isHolidayCellValue(rawCell) ? "#7F1D1D" : "#000000";
+      ctx.font = `${hol || isHolidayCellValue(rawCell) ? "700" : "400"} 13px ${fontFamily}`;
       ctx.textAlign = "center";
       ctx.fillText(
         formatEmailShiftText(rawCell),
