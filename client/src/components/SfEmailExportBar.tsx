@@ -11,7 +11,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { isDayColumnHoliday, isHolidayCellValue, type SfWeekBlock } from "@shared/sfSchedule";
+import {
+  getContrastTextColorForHex,
+  isDayColumnHoliday,
+  isHolidayCellValue,
+  isValidHexColor,
+  type SfWeekBlock,
+} from "@shared/sfSchedule";
 
 interface SfEmailExportBarProps {
   week: SfWeekBlock;
@@ -62,7 +68,11 @@ function resolveCellBackground(
   dayIndex: number,
   rowDays: string[],
   isHolidayCol = false,
+  customCellColor?: string,
 ): string {
+  if (isValidHexColor(customCellColor)) {
+    return customCellColor!.trim();
+  }
   if (isHolidayCol || isHolidayCellValue(cellValue)) {
     return rowIndex % 2 === 0 ? "#F8CECC" : "#F4B8B4";
   }
@@ -127,9 +137,16 @@ export function buildSfEmailHtml(week: SfWeekBlock): string {
       const cells = Array.from({ length: 6 }, (_, dIdx) => {
         const hol = isDayColumnHoliday(week, dIdx);
         const rawCell = row.days?.[dIdx] || (hol ? "HOLIDAY" : "");
+        const customColor = row.cellColors?.[dIdx] || "";
+        const hasCustomColor = isValidHexColor(customColor);
         const formatted = escapeHtml(formatEmailShiftText(rawCell));
-        const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol);
-        return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:13px;${hol || isHolidayCellValue(rawCell) ? "font-weight:bold;color:#7F1D1D;" : ""}padding:3px 10px;white-space:nowrap;">${formatted}</td>`;
+        const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol, customColor);
+        const textColorStyle = hasCustomColor
+          ? `color:${getContrastTextColorForHex(customColor, "#000000", "#FFFFFF")};`
+          : hol || isHolidayCellValue(rawCell)
+            ? "font-weight:bold;color:#7F1D1D;"
+            : "";
+        return `<td bgcolor="${bg}" align="center" style="${borderCss}${fontCss}background-color:${bg};font-size:13px;${textColorStyle}padding:3px 10px;white-space:nowrap;">${formatted}</td>`;
       }).join("");
 
       return `<tr>
@@ -282,9 +299,15 @@ async function renderSfSchedulePngBlob(week: SfWeekBlock): Promise<Blob> {
       const x = nameColW + dIdx * dayColW;
       const hol = isDayColumnHoliday(week, dIdx);
       const rawCell = row.days?.[dIdx] || (hol ? "HOLIDAY" : "");
-      const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol);
+      const customColor = row.cellColors?.[dIdx] || "";
+      const hasCustomColor = isValidHexColor(customColor);
+      const bg = resolveCellBackground(rawCell, rIdx, dIdx, row.days || [], hol, customColor);
       drawRectWithBorder(x, curY, dayColW, staffRowH, bg);
-      ctx.fillStyle = hol || isHolidayCellValue(rawCell) ? "#7F1D1D" : "#000000";
+      ctx.fillStyle = hasCustomColor
+        ? getContrastTextColorForHex(customColor, "#000000", "#FFFFFF")
+        : hol || isHolidayCellValue(rawCell)
+          ? "#7F1D1D"
+          : "#000000";
       ctx.font = `${hol || isHolidayCellValue(rawCell) ? "700" : "400"} 13px ${fontFamily}`;
       ctx.textAlign = "center";
       ctx.fillText(

@@ -9,8 +9,10 @@ import {
 } from "@shared/truckSchedule";
 import {
   getActiveTvSfWeek,
+  getContrastTextColorForHex,
   isOpeningShift,
   isClosingShift,
+  isValidHexColor,
   resolveSfDailyShiftView,
 } from "@shared/sfSchedule";
 import {
@@ -2464,9 +2466,11 @@ export default function CustomScreenCanvas({
                           </span>
                         </td>
                         {(r.days || []).map((cell: string, cIdx: number) => {
+                          const customCellColor = r.cellColors?.[cIdx] || "";
+                          const hasCustomColor = isValidHexColor(customCellColor);
                           const isColHoliday = isDayColumnHoliday(activeSfWeek, cIdx);
                           const isHolidayCell = isColHoliday || isHolidayCellValue(cell);
-                          const isOff = !isHolidayCell && (!cell || cell.toUpperCase() === "OFF");
+                          const isOff = !isHolidayCell && !hasCustomColor && (!cell || cell.toUpperCase() === "OFF");
                           const cellHotShot =
                             days[cIdx]?.date &&
                             getHotShotsForScheduleHeaderDate(allHotShotRoutes, days[cIdx].date).find(
@@ -2478,17 +2482,32 @@ export default function CustomScreenCanvas({
                               className={`text-center font-mono font-semibold truncate ${
                                 cellHotShot
                                   ? "text-amber-500 bg-amber-500/12 font-bold"
-                                  : isHolidayCell
-                                    ? "bg-rose-500/20 text-rose-200 font-extrabold"
-                                    : isOff
-                                      ? "text-muted-foreground/45"
-                                    : cIdx === todayCol
-                                      ? "text-primary bg-primary/10 font-bold"
-                                      : "text-foreground/90"
+                                  : hasCustomColor
+                                    ? "font-bold"
+                                    : isHolidayCell
+                                      ? "bg-rose-500/20 text-rose-200 font-extrabold"
+                                      : isOff
+                                        ? "text-muted-foreground/45"
+                                        : cIdx === todayCol
+                                          ? "text-primary bg-primary/10 font-bold"
+                                          : "text-foreground/90"
                               }`}
-                              style={{ padding: `calc(4 * var(--u)) calc(3 * var(--u))`, fontSize: `calc(11 * var(--u))` }}
+                              style={{
+                                backgroundColor:
+                                  !cellHotShot && hasCustomColor ? customCellColor : undefined,
+                                color:
+                                  !cellHotShot && hasCustomColor
+                                    ? getContrastTextColorForHex(customCellColor, "#0f172a", "#ffffff")
+                                    : undefined,
+                                padding: `calc(4 * var(--u)) calc(3 * var(--u))`,
+                                fontSize: `calc(11 * var(--u))`,
+                              }}
                             >
-                              {cellHotShot ? `⚡ ${cell || "HS"}` : cell || "OFF"}
+                              {cellHotShot
+                                ? `⚡ ${cell || "HS"}`
+                                : isColHoliday && (!cell || !cell.trim())
+                                  ? "HOLIDAY"
+                                  : cell || "OFF"}
                             </td>
                           );
                         })}

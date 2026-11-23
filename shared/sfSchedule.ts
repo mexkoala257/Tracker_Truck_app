@@ -17,6 +17,46 @@ export interface SfScheduleRow {
   name: string;
   color: string;
   days: string[];
+  /** Optional per-cell custom background color hexes (length 6, "" = default) */
+  cellColors?: string[];
+}
+
+export interface SfCellColorPreset {
+  label: string;
+  hex: string;
+}
+
+export const SF_CELL_COLOR_PRESETS: SfCellColorPreset[] = [
+  { label: "PTO / Gold", hex: "#FFE699" },
+  { label: "Bomgaars Orange", hex: "#ED7D31" },
+  { label: "Crafts Peach", hex: "#F8CBAD" },
+  { label: "Ice Cream Blue", hex: "#75C9F0" },
+  { label: "Floors Pink", hex: "#F4B8E4" },
+  { label: "Mint Green", hex: "#A9D08E" },
+  { label: "Bright Green", hex: "#92D050" },
+  { label: "Holiday Rose", hex: "#F8CECC" },
+  { label: "Lavender", hex: "#D8B4FE" },
+  { label: "Teal", hex: "#5EEAD4" },
+  { label: "Alert Red", hex: "#EF4444" },
+  { label: "Slate Gray", hex: "#AEAAAA" },
+];
+
+export function isValidHexColor(val?: string | null): val is string {
+  return typeof val === "string" && /^#[0-9a-fA-F]{6}$/.test(val.trim());
+}
+
+export function getContrastTextColorForHex(
+  hex?: string | null,
+  darkText = "#0f172a",
+  lightText = "#ffffff",
+): string {
+  if (!isValidHexColor(hex)) return darkText;
+  const clean = hex!.trim().slice(1);
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 145 ? darkText : lightText;
 }
 
 export interface SfWeekBlock {
@@ -158,6 +198,7 @@ export function createBlankSfWeekBlock(
       name: r.name,
       color: r.color,
       days: ["", "", "", "", "", "OFF"],
+      cellColors: ["", "", "", "", "", ""],
     })),
     footerNote: "Nick Kreger",
   };
@@ -189,11 +230,16 @@ export function normalizeSfWeekBlock(
           name: r.name ?? roster[i]?.name ?? `Member ${i + 1}`,
           color: r.color || roster[i]?.color || "#93c5fd",
           days: Array.from({ length: 6 }, (_, dIdx) => String(r.days?.[dIdx] ?? (dIdx === 5 ? "OFF" : ""))),
+          cellColors: Array.from({ length: 6 }, (_, dIdx) => {
+            const rawC = r.cellColors?.[dIdx];
+            return isValidHexColor(rawC) ? rawC!.trim() : "";
+          }),
         }))
       : roster.map((r) => ({
           name: r.name,
           color: r.color,
           days: ["", "", "", "", "", "OFF"],
+          cellColors: ["", "", "", "", "", ""],
         }));
 
   return {

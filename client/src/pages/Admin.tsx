@@ -159,6 +159,8 @@ import {
   evaluateSfWeekCoverage,
   isOpeningShift,
   isClosingShift,
+  SF_CELL_COLOR_PRESETS,
+  isValidHexColor,
 } from "@shared/sfSchedule";
 import {
   evaluateAnnouncementUrgency,
@@ -300,6 +302,8 @@ export default function Admin() {
 
   // Active shift preset brush for SF Schedule quick-fill (`null` = Dropdown Mode; `""` = Clear/Eraser; string = shift preset)
   const [shiftBrush, setShiftBrush] = useState<string | null>(null);
+  // Active cell background color brush (`null` = Off; `""` = Reset to Default; `"#RRGGBB"` = Paint custom cell color)
+  const [sfCellColorBrush, setSfCellColorBrush] = useState<string | null>(null);
   const [isDraggingSfBrush, setIsDraggingSfBrush] = useState(false);
 
   // Display Fleet, Groups & Watchdog Modals
@@ -1218,16 +1222,17 @@ export default function Admin() {
   }, [isDraggingSfBrush]);
 
   useEffect(() => {
-    if (shiftBrush === null) return;
+    if (shiftBrush === null && sfCellColorBrush === null) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setShiftBrush(null);
+        setSfCellColorBrush(null);
         setIsDraggingSfBrush(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [shiftBrush]);
+  }, [shiftBrush, sfCellColorBrush]);
 
   const normalizedSfSchedule = useMemo(
     () => normalizeSfScheduleState(displayState?.sfSchedule),
@@ -1448,6 +1453,7 @@ export default function Admin() {
         name: r.name,
         color: r.color || "#93c5fd",
         days: Array.from({ length: 6 }, (_, i) => String(r.days?.[i] ?? (i === 5 ? "OFF" : ""))),
+        cellColors: Array.from({ length: 6 }, (_, i) => String(r.cellColors?.[i] ?? "")),
       })),
     };
     updateSelectedSfWeek(copiedWeek, true);
@@ -1468,6 +1474,7 @@ export default function Admin() {
       rows: selectedSfWeek.rows.map((r) => ({
         ...r,
         days: ["", "", "", "", "", "OFF"],
+        cellColors: ["", "", "", "", "", ""],
       })),
     });
     toast({ title: `Cleared shifts for ${buildShortSfWeekRange(sfSelectedMondayIso)}` });
@@ -5827,10 +5834,11 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     size="sm"
-                    variant={shiftBrush === null ? "default" : "outline"}
+                    variant={shiftBrush === null && sfCellColorBrush === null ? "default" : "outline"}
                     className="h-7 text-xs gap-1.5"
                     onClick={() => {
                       setShiftBrush(null);
+                      setSfCellColorBrush(null);
                       setIsDraggingSfBrush(false);
                     }}
                   >
@@ -5860,7 +5868,10 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 ? "bg-rose-600 hover:bg-rose-500 text-white border-rose-400"
                                 : ""
                           }`}
-                          onClick={() => setShiftBrush((prev) => (prev === preset ? null : preset))}
+                          onClick={() => {
+                            setSfCellColorBrush(null);
+                            setShiftBrush((prev) => (prev === preset ? null : preset));
+                          }}
                         >
                           {isOp && <Sun className="w-3 h-3 text-sky-400" />}
                           {isCl && <Moon className="w-3 h-3 text-indigo-400" />}
@@ -5874,7 +5885,10 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                     size="sm"
                     variant={shiftBrush === "" ? "destructive" : "outline"}
                     className="h-7 text-xs gap-1"
-                    onClick={() => setShiftBrush((prev) => (prev === "" ? null : ""))}
+                    onClick={() => {
+                      setSfCellColorBrush(null);
+                      setShiftBrush((prev) => (prev === "" ? null : ""));
+                    }}
                     title="Mass-clear cells by clicking or dragging"
                   >
                     <Eraser className="w-3 h-3" />
@@ -5882,16 +5896,100 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                   </Button>
                 </div>
 
-                {shiftBrush !== null ? (
+                {/* Quick Cell Color Brush Row */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/60">
+                  <span className="text-xs font-bold text-muted-foreground mr-1 inline-flex items-center gap-1">
+                    <Palette className="w-3.5 h-3.5 text-primary" />
+                    Cell Color Brush:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShiftBrush(null);
+                      setSfCellColorBrush((prev) => (prev === "" ? null : ""));
+                    }}
+                    className={`h-6 px-2 rounded border text-[11px] font-bold transition-colors ${
+                      sfCellColorBrush === ""
+                        ? "bg-primary text-primary-foreground border-primary ring-2 ring-primary/40"
+                        : "bg-secondary/60 hover:bg-secondary text-muted-foreground hover:text-foreground border-border"
+                    }`}
+                    title="Click or drag cells to reset their background color back to Default"
+                  >
+                    Default (Reset Color)
+                  </button>
+                  {SF_CELL_COLOR_PRESETS.map((preset) => {
+                    const activeColor =
+                      sfCellColorBrush !== null &&
+                      sfCellColorBrush.toLowerCase() === preset.hex.toLowerCase();
+                    return (
+                      <button
+                        key={preset.hex}
+                        type="button"
+                        onClick={() => {
+                          setShiftBrush(null);
+                          setSfCellColorBrush((prev) =>
+                            prev && prev.toLowerCase() === preset.hex.toLowerCase()
+                              ? null
+                              : preset.hex,
+                          );
+                        }}
+                        style={{ backgroundColor: preset.hex }}
+                        className={`w-6 h-6 rounded-md border transition-transform ${
+                          activeColor
+                            ? "ring-2 ring-white border-black scale-110"
+                            : "border-black/40 hover:scale-105"
+                        }`}
+                        title={`Paint cells ${preset.label} (${preset.hex})`}
+                      />
+                    );
+                  })}
+                  <label
+                    className={`inline-flex items-center gap-1.5 px-2 h-6 rounded-md border text-[11px] font-bold cursor-pointer transition-colors ${
+                      sfCellColorBrush &&
+                      !SF_CELL_COLOR_PRESETS.some(
+                        (p) => p.hex.toLowerCase() === sfCellColorBrush.toLowerCase(),
+                      )
+                        ? "border-primary bg-primary/20 text-primary ring-1 ring-primary"
+                        : "border-border bg-background hover:bg-secondary text-foreground"
+                    }`}
+                    title="Choose any custom color from the color wheel and click/drag across cells"
+                  >
+                    <input
+                      type="color"
+                      value={isValidHexColor(sfCellColorBrush) ? sfCellColorBrush : "#75C9F0"}
+                      onChange={(e) => {
+                        setShiftBrush(null);
+                        setSfCellColorBrush(e.target.value);
+                      }}
+                      className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 p-0"
+                    />
+                    <span>Custom Color...</span>
+                  </label>
+                </div>
+
+                {shiftBrush !== null || sfCellColorBrush !== null ? (
                   <div className="text-[11px] text-sky-300 flex flex-wrap items-center justify-between gap-2 px-0.5">
                     <span>
-                      🖌️ <strong>Mass-Fill Active ({shiftBrush || "Clear"}):</strong> Click or{" "}
-                      <strong>click-and-drag</strong> across any boxes, click <strong>M–F</strong> on a member row, or click{" "}
-                      <strong>Fill Day</strong> on a column header.
+                      {sfCellColorBrush !== null ? (
+                        <>
+                          🎨 <strong>Cell Color Brush Active ({sfCellColorBrush || "Default / Reset"}):</strong> Click or{" "}
+                          <strong>click-and-drag</strong> across any cells, click <strong>M–F</strong> on a member row, or click{" "}
+                          <strong>Color Day</strong> on a column header to paint cell backgrounds.
+                        </>
+                      ) : (
+                        <>
+                          🖌️ <strong>Mass-Fill Active ({shiftBrush || "Clear"}):</strong> Click or{" "}
+                          <strong>click-and-drag</strong> across any boxes, click <strong>M–F</strong> on a member row, or click{" "}
+                          <strong>Fill Day</strong> on a column header.
+                        </>
+                      )}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setShiftBrush(null)}
+                      onClick={() => {
+                        setShiftBrush(null);
+                        setSfCellColorBrush(null);
+                      }}
                       className="underline hover:text-white font-semibold"
                     >
                       Switch back to Dropdowns (Esc)
@@ -5899,7 +5997,7 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                   </div>
                 ) : (
                   <div className="text-[11px] text-muted-foreground px-0.5">
-                    Click any box to open its shift dropdown (or click <strong>M–F</strong> inside the dropdown to fill Monday–Friday at once). Select a Quick-Fill Brush above to mass-paint shifts across boxes.
+                    Click any box to pick a shift or change its <strong>Cell Background Color</strong> (if no color is selected, it defaults automatically). Or select a <strong>Quick-Fill Brush</strong> / <strong>Cell Color Brush</strong> above to paint across cells.
                   </div>
                 )}
               </div>
@@ -6037,24 +6135,36 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 {isColHoliday ? "🎉 Holiday: ON" : "🎉 Holiday"}
                               </button>
 
-                              {/* Mass-fill entire day column when Quick-Fill Brush is active */}
-                              {shiftBrush !== null && (
+                              {/* Mass-fill entire day column when Quick-Fill Shift or Color Brush is active */}
+                              {(shiftBrush !== null || sfCellColorBrush !== null) && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     updateSelectedSfWeek((currWeek) => {
                                       const rows = currWeek.rows.map((r) => {
+                                        if (sfCellColorBrush !== null) {
+                                          const nextColors = Array.from(
+                                            { length: 6 },
+                                            (_, i) => r.cellColors?.[i] || "",
+                                          );
+                                          nextColors[dIdx] = sfCellColorBrush;
+                                          return { ...r, cellColors: nextColors };
+                                        }
                                         const nextDays = [...r.days];
-                                        nextDays[dIdx] = shiftBrush;
+                                        nextDays[dIdx] = shiftBrush || "";
                                         return { ...r, days: nextDays };
                                       });
                                       return { ...currWeek, rows };
                                     });
                                   }}
                                   className="px-1.5 py-0.5 rounded bg-primary/20 hover:bg-primary hover:text-primary-foreground text-primary text-[9px] font-bold transition-colors"
-                                  title={`Stamp "${shiftBrush || "Clear"}" down entire ${d.day} column`}
+                                  title={
+                                    sfCellColorBrush !== null
+                                      ? `Paint color "${sfCellColorBrush || "Default"}" down entire ${d.day} column`
+                                      : `Stamp "${shiftBrush || "Clear"}" down entire ${d.day} column`
+                                  }
                                 >
-                                  Fill {d.day}
+                                  {sfCellColorBrush !== null ? `Color ${d.day}` : `Fill ${d.day}`}
                                 </button>
                               )}
                             </div>
@@ -6125,25 +6235,40 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                 }}
                                 className="h-8 text-xs font-bold min-w-[110px]"
                               />
-                              {shiftBrush !== null ? (
+                              {shiftBrush !== null || sfCellColorBrush !== null ? (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     updateSelectedSfWeek((currWeek) => {
                                       const rows = [...currWeek.rows];
                                       if (!rows[rIdx]) return currWeek;
-                                      const nextDays = [...rows[rIdx].days];
-                                      for (let i = 0; i < 5; i++) {
-                                        nextDays[i] = shiftBrush;
+                                      if (sfCellColorBrush !== null) {
+                                        const nextColors = Array.from(
+                                          { length: 6 },
+                                          (_, i) => rows[rIdx].cellColors?.[i] || "",
+                                        );
+                                        for (let i = 0; i < 5; i++) {
+                                          nextColors[i] = sfCellColorBrush;
+                                        }
+                                        rows[rIdx] = { ...rows[rIdx], cellColors: nextColors };
+                                      } else {
+                                        const nextDays = [...rows[rIdx].days];
+                                        for (let i = 0; i < 5; i++) {
+                                          nextDays[i] = shiftBrush || "";
+                                        }
+                                        rows[rIdx] = { ...rows[rIdx], days: nextDays };
                                       }
-                                      rows[rIdx] = { ...rows[rIdx], days: nextDays };
                                       return { ...currWeek, rows };
                                     });
                                   }}
                                   className="h-7 px-1.5 rounded border border-primary/50 bg-primary/15 hover:bg-primary hover:text-primary-foreground text-[10px] font-bold text-primary transition-colors shrink-0"
-                                  title={`Stamp "${shiftBrush || "Clear"}" across Monday–Friday for ${row.name}`}
+                                  title={
+                                    sfCellColorBrush !== null
+                                      ? `Paint color "${sfCellColorBrush || "Default"}" across Monday-Friday for ${row.name}`
+                                      : `Stamp "${shiftBrush || "Clear"}" across Monday-Friday for ${row.name}`
+                                  }
                                 >
-                                  M–F
+                                  M-F
                                 </button>
                               ) : (
                                 <button
@@ -6197,8 +6322,10 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                     allShiftOptions={normalizedSfSchedule.shiftOptions}
                                     isMemberScoped={memberShiftMeta.isMemberScoped}
                                     accentColor={row.color || "#93c5fd"}
+                                    cellColor={row.cellColors?.[cIdx] || ""}
                                     isHolidayColumn={isColHoliday}
                                     activeBrush={shiftBrush}
+                                    activeColorBrush={sfCellColorBrush}
                                     isDraggingBrush={isDraggingSfBrush}
                                     onStartBrushDrag={() => setIsDraggingSfBrush(true)}
                                     onChange={(nextVal) => {
@@ -6220,6 +6347,34 @@ X-API-Key: ${showWebhookKey && displayState?.settings?.webhookApiKey ? displaySt
                                           nextDays[i] = shiftVal;
                                         }
                                         rows[rIdx] = { ...rows[rIdx], days: nextDays };
+                                        return { ...currWeek, rows };
+                                      });
+                                    }}
+                                    onChangeCellColor={(nextColor) => {
+                                      updateSelectedSfWeek((currWeek) => {
+                                        const rows = [...currWeek.rows];
+                                        if (!rows[rIdx]) return currWeek;
+                                        const nextColors = Array.from(
+                                          { length: 6 },
+                                          (_, i) => rows[rIdx].cellColors?.[i] || "",
+                                        );
+                                        nextColors[cIdx] = nextColor;
+                                        rows[rIdx] = { ...rows[rIdx], cellColors: nextColors };
+                                        return { ...currWeek, rows };
+                                      });
+                                    }}
+                                    onApplyCellColorMonFri={(nextColor) => {
+                                      updateSelectedSfWeek((currWeek) => {
+                                        const rows = [...currWeek.rows];
+                                        if (!rows[rIdx]) return currWeek;
+                                        const nextColors = Array.from(
+                                          { length: 6 },
+                                          (_, i) => rows[rIdx].cellColors?.[i] || "",
+                                        );
+                                        for (let i = 0; i < 5; i++) {
+                                          nextColors[i] = nextColor;
+                                        }
+                                        rows[rIdx] = { ...rows[rIdx], cellColors: nextColors };
                                         return { ...currWeek, rows };
                                       });
                                     }}

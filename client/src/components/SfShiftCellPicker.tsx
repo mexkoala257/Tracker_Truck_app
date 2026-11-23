@@ -1,7 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Moon, Pencil, Plus, Search, Settings2, Sun, X } from "lucide-react";
-import { isClosingShift, isHolidayCellValue, isOpeningShift } from "@shared/sfSchedule";
+import { Check, ChevronDown, Moon, Palette, Pencil, Plus, RotateCcw, Search, Settings2, Sun, X } from "lucide-react";
+import {
+  SF_CELL_COLOR_PRESETS,
+  getContrastTextColorForHex,
+  isClosingShift,
+  isHolidayCellValue,
+  isOpeningShift,
+  isValidHexColor,
+} from "@shared/sfSchedule";
 
 interface SfShiftCellPickerProps {
   value: string;
@@ -10,13 +17,19 @@ interface SfShiftCellPickerProps {
   allShiftOptions: string[];
   isMemberScoped: boolean;
   accentColor?: string;
+  /** Optional custom background color hex for this cell ("" = default) */
+  cellColor?: string;
   isHolidayColumn?: boolean;
-  /** `null` = Dropdown Mode; `string` (including `""` for Clear/Eraser) = Quick-Fill Brush Mode */
+  /** `null` = Dropdown Mode; `string` (including `""` for Clear/Eraser) = Quick-Fill Shift Brush Mode */
   activeBrush: string | null;
+  /** `null` = Off; `""` = Reset cell color to default; `"#RRGGBB"` = Quick-Fill Color Brush Mode */
+  activeColorBrush?: string | null;
   isDraggingBrush?: boolean;
   onStartBrushDrag?: () => void;
   onChange: (nextValue: string) => void;
   onApplyMonFri?: (shiftValue: string) => void;
+  onChangeCellColor?: (nextColor: string) => void;
+  onApplyCellColorMonFri?: (nextColor: string) => void;
   onAddShiftToMember?: (newShift: string) => void;
   onOpenMemberShiftsModal?: () => void;
 }
@@ -28,12 +41,16 @@ export default function SfShiftCellPicker({
   allShiftOptions,
   isMemberScoped,
   accentColor,
+  cellColor = "",
   isHolidayColumn = false,
   activeBrush,
+  activeColorBrush = null,
   isDraggingBrush = false,
   onStartBrushDrag,
   onChange,
   onApplyMonFri,
+  onChangeCellColor,
+  onApplyCellColorMonFri,
   onAddShiftToMember,
   onOpenMemberShiftsModal,
 }: SfShiftCellPickerProps) {
@@ -54,10 +71,10 @@ export default function SfShiftCellPicker({
 
   // Close dropdown automatically if user switches into Quick-Fill Brush mode
   useEffect(() => {
-    if (activeBrush !== null && open) {
+    if ((activeBrush !== null || activeColorBrush !== null) && open) {
       setOpen(false);
     }
-  }, [activeBrush, open]);
+  }, [activeBrush, activeColorBrush, open]);
 
   const updateMenuPosition = () => {
     const el = triggerRef.current;
@@ -67,7 +84,7 @@ export default function SfShiftCellPicker({
     const maxLeft = Math.max(8, window.innerWidth - menuWidth - 12);
     const left = Math.min(Math.max(8, rect.left), maxLeft);
 
-    const estimatedHeight = 340;
+    const estimatedHeight = 420;
     const fitsBelow = rect.bottom + estimatedHeight < window.innerHeight - 8;
     const top = fitsBelow ? rect.bottom + 4 : Math.max(8, rect.top - estimatedHeight - 4);
 
@@ -156,7 +173,13 @@ export default function SfShiftCellPicker({
   const isOffOrPto = !isHoliday && (upperVal === "OFF" || upperVal.startsWith("PTO"));
   const opener = isOpeningShift(value);
   const closer = isClosingShift(value);
-  const isBrushActive = activeBrush !== null;
+  const isShiftBrushActive = activeBrush !== null;
+  const isColorBrushActive = activeColorBrush !== null;
+  const isBrushActive = isShiftBrushActive || isColorBrushActive;
+  const hasCustomCellColor = isValidHexColor(cellColor);
+  const customCellTextColor = hasCustomCellColor
+    ? getContrastTextColorForHex(cellColor, "#0f172a", "#ffffff")
+    : undefined;
 
   const renderShiftTag = (shiftText: string) => {
     const isOp = isOpeningShift(shiftText);
@@ -189,11 +212,18 @@ export default function SfShiftCellPicker({
           if (!isBrushActive) return;
           e.preventDefault();
           onStartBrushDrag?.();
-          onChange(activeBrush);
+          if (isColorBrushActive) {
+            onChangeCellColor?.(activeColorBrush || "");
+          } else if (isShiftBrushActive) {
+            onChange(activeBrush || "");
+          }
         }}
         onMouseEnter={() => {
-          if (isBrushActive && isDraggingBrush) {
-            onChange(activeBrush);
+          if (!isBrushActive || !isDraggingBrush) return;
+          if (isColorBrushActive) {
+            onChangeCellColor?.(activeColorBrush || "");
+          } else if (isShiftBrushActive) {
+            onChange(activeBrush || "");
           }
         }}
         onClick={() => {
@@ -204,44 +234,59 @@ export default function SfShiftCellPicker({
           setCustomEntryOpen(false);
           setCustomEntryText("");
         }}
+        style={
+          hasCustomCellColor
+            ? {
+                backgroundColor: cellColor,
+                borderColor: cellColor,
+                color: customCellTextColor,
+              }
+            : undefined
+        }
         className={`w-full min-h-8 px-2 py-1 rounded-md border text-xs flex items-center justify-between gap-1 transition-colors text-left select-none ${
           isBrushActive
             ? "cursor-cell ring-1 ring-primary/35 hover:ring-2 hover:ring-primary hover:bg-primary/10 border-primary/40 bg-secondary/25"
             : open
               ? "border-primary ring-1 ring-primary/40 bg-secondary/50"
-              : isHoliday
-                ? "border-rose-500/60 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 font-extrabold"
-                : value
-                  ? isOffOrPto
-                    ? "border-slate-600/40 bg-slate-800/30 text-slate-400 hover:border-slate-500/60"
-                    : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
-                  : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
+              : hasCustomCellColor
+                ? "font-bold shadow-sm hover:brightness-95"
+                : isHoliday
+                  ? "border-rose-500/60 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30 font-extrabold"
+                  : value
+                    ? isOffOrPto
+                      ? "border-slate-600/40 bg-slate-800/30 text-slate-400 hover:border-slate-500/60"
+                      : "border-border bg-secondary/30 hover:bg-secondary/50 font-semibold"
+                    : "border-border/60 bg-background/50 text-muted-foreground hover:border-border hover:text-foreground"
         }`}
         title={
-          isBrushActive
-            ? `Click or drag to stamp ${activeBrush || "Clear (—)"}`
-            : value || `Select shift for ${memberName}`
+          isColorBrushActive
+            ? `Click or drag to paint cell color (${activeColorBrush || "Default"})`
+            : isShiftBrushActive
+              ? `Click or drag to stamp ${activeBrush || "Clear (?)"}`
+              : value || `Select shift for ${memberName}`
         }
       >
         <span
           className="truncate leading-tight"
           style={
-            value && !isOffOrPto && !isHoliday && accentColor
-              ? { color: accentColor }
-              : undefined
+            hasCustomCellColor
+              ? { color: customCellTextColor }
+              : value && !isOffOrPto && !isHoliday && accentColor
+                ? { color: accentColor }
+                : undefined
           }
         >
-          {isHoliday ? `🎉 ${value || "HOLIDAY"}` : value || "— Select —"}
+          {isHoliday ? `?? ${value || "HOLIDAY"}` : value || "? Select ?"}
         </span>
         <span className="inline-flex items-center gap-1 shrink-0">
           {opener && (
-            <span title="Opening Shift (≤ 7:15 AM)" className="inline-flex">
-              <Sun className="w-3 h-3 text-sky-400 opacity-85" />
+            <span title="Opening Shift (<= 7:15 AM)" className="inline-flex">
+              <Sun className={`w-3 h-3 ${hasCustomCellColor ? "opacity-90" : "text-sky-400 opacity-85"}`} />
             </span>
           )}
           {closer && (
-            <span title="Closing Shift (≥ 6:00 PM)" className="inline-flex">
-              <Moon className="w-3 h-3 text-indigo-400 opacity-85" />
+            <span title="Closing Shift (>= 6:00 PM)" className="inline-flex">
+              <Moon className={`w-3 h-3 ${hasCustomCellColor ? "opacity-90" : "text-indigo-400 opacity-85"}`} />
             </span>
           )}
           {!isBrushActive && <ChevronDown className="w-3.5 h-3.5 opacity-60" />}
@@ -260,7 +305,7 @@ export default function SfShiftCellPicker({
               width: coords.width,
               zIndex: 9999,
             }}
-            className="rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden flex flex-col max-h-[345px]"
+            className="rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden flex flex-col max-h-[430px]"
           >
             {/* Search / Custom Shift Entry Bar */}
             <div className="p-2 border-b border-border bg-secondary/30 flex items-center gap-1.5">
@@ -301,6 +346,81 @@ export default function SfShiftCellPicker({
             </div>
 
             <div className="overflow-y-auto p-1 space-y-0.5 flex-1">
+              {/* Per-Cell Background Color Picker */}
+              {!trimmedQuery && onChangeCellColor && (
+                <div className="p-2 mb-1 rounded-lg border border-border/70 bg-secondary/25 space-y-1.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Palette className="w-3 h-3 text-primary" />
+                      <span>Cell Background Color</span>
+                    </span>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onChangeCellColor("")}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors inline-flex items-center gap-0.5 ${
+                          !hasCustomCellColor
+                            ? "bg-primary/20 border-primary text-primary"
+                            : "bg-secondary/60 border-border/70 text-muted-foreground hover:text-foreground"
+                        }`}
+                        title="Use default automatic color"
+                      >
+                        <RotateCcw className="w-2.5 h-2.5" />
+                        <span>Default</span>
+                      </button>
+                      {onApplyCellColorMonFri && (
+                        <button
+                          type="button"
+                          onClick={() => onApplyCellColorMonFri(hasCustomCellColor ? cellColor : "")}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-border/70 bg-secondary/60 hover:bg-primary hover:text-primary-foreground text-muted-foreground transition-colors"
+                          title={
+                            hasCustomCellColor
+                              ? `Apply color ${cellColor} to Monday?Friday for ${memberName}`
+                              : `Reset Monday?Friday cell colors to Default for ${memberName}`
+                          }
+                        >
+                          Color M?F
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {SF_CELL_COLOR_PRESETS.map((preset) => {
+                      const isSelectedColor =
+                        hasCustomCellColor && cellColor.toLowerCase() === preset.hex.toLowerCase();
+                      return (
+                        <button
+                          key={preset.hex}
+                          type="button"
+                          onClick={() =>
+                            onChangeCellColor(isSelectedColor ? "" : preset.hex)
+                          }
+                          style={{ backgroundColor: preset.hex }}
+                          className={`w-5 h-5 rounded-md border transition-transform ${
+                            isSelectedColor
+                              ? "ring-2 ring-white border-black scale-110"
+                              : "border-black/40 hover:scale-110"
+                          }`}
+                          title={`${preset.label} (${preset.hex})`}
+                        />
+                      );
+                    })}
+                    <label
+                      className="inline-flex items-center gap-1 px-1.5 h-5 rounded-md border border-border bg-background hover:bg-secondary text-[10px] font-semibold cursor-pointer ml-auto"
+                      title="Pick any custom cell color"
+                    >
+                      <input
+                        type="color"
+                        value={hasCustomCellColor ? cellColor : "#75C9F0"}
+                        onChange={(e) => onChangeCellColor(e.target.value)}
+                        className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <span>Any Color</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
               {/* Clear Cell Option */}
               {value && !trimmedQuery && (
                 <button

@@ -10,7 +10,7 @@ import {
   isDayColumnHoliday,
   isHolidayCellValue,
 } from "@shared/truckSchedule";
-import { getActiveTvSfWeek } from "@shared/sfSchedule";
+import { getActiveTvSfWeek, getContrastTextColorForHex, isValidHexColor } from "@shared/sfSchedule";
 import {
   BUILTIN_SCREENS,
   createDefaultBuiltInScreenDefinition,
@@ -1998,9 +1998,11 @@ export default function TvDisplay() {
                                     </span>
                                   </td>
                                   {(row.days || []).map((cell: string, cIdx: number) => {
+                                    const customCellColor = row.cellColors?.[cIdx] || "";
+                                    const hasCustomColor = isValidHexColor(customCellColor);
                                     const isColHoliday = isDayColumnHoliday(sf, cIdx);
                                     const isCellHoliday = isColHoliday || isHolidayCellValue(cell);
-                                    const isOff = !isCellHoliday && (cell || "").trim().toUpperCase() === "OFF";
+                                    const isOff = !isCellHoliday && !hasCustomColor && (cell || "").trim().toUpperCase() === "OFF";
                                     const cellHotShot =
                                       sf.days?.[cIdx]?.date &&
                                       getHotShotsForScheduleHeaderDate(allHotShotRoutes, sf.days[cIdx].date).find(
@@ -2012,20 +2014,26 @@ export default function TvDisplay() {
                                         className={`text-center font-mono font-semibold border-r last:border-r-0 border-border/50 ${
                                           cellHotShot
                                             ? "bg-amber-500/15"
-                                            : isCellHoliday
-                                              ? "bg-rose-500/20 text-rose-200 font-extrabold"
-                                              : cIdx === todayCol
-                                                ? "bg-primary/[0.08]"
-                                                : ""
+                                            : hasCustomColor
+                                              ? "font-bold"
+                                              : isCellHoliday
+                                                ? "bg-rose-500/20 text-rose-200 font-extrabold"
+                                                : cIdx === todayCol
+                                                  ? "bg-primary/[0.08]"
+                                                  : ""
                                         }`}
                                         style={{
+                                          backgroundColor:
+                                            !cellHotShot && hasCustomColor ? customCellColor : undefined,
                                           color: cellHotShot
                                             ? "#f59e0b"
-                                            : isCellHoliday
-                                              ? undefined
-                                              : isOff
+                                            : hasCustomColor
+                                              ? getContrastTextColorForHex(customCellColor, "#0f172a", "#ffffff")
+                                              : isCellHoliday
                                                 ? undefined
-                                                : memberColor,
+                                                : isOff
+                                                  ? undefined
+                                                  : memberColor,
                                           opacity: isOff && !cellHotShot ? 0.45 : 1,
                                           padding: `calc(5.5 * var(--u)) calc(4 * var(--u))`,
                                           fontSize: `calc(11 * var(--u))`,
